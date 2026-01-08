@@ -1,0 +1,36 @@
+package com.sdd.etl.subprocess;
+
+import com.sdd.etl.ETLException;
+import com.sdd.etl.context.ETLContext;
+import com.sdd.etl.context.SubprocessType;
+
+/**
+ * Interface for ETL subprocess components.
+ * All subprocess implementations must implement this interface.
+ */
+public interface SubprocessInterface {
+
+    /**
+     * Executes the subprocess.
+     *
+     * @param context ETL context containing execution state
+     * @return number of records processed (depends on subprocess type)
+     * @throws ETLException if subprocess execution fails
+     */
+    int execute(ETLContext context) throws ETLException;
+
+    /**
+     * Validates context state before subprocess execution.
+     *
+     * @param context ETL context to validate
+     * @throws ETLException if context is invalid
+     */
+    void validateContext(ETLContext context) throws ETLException;
+
+    /**
+     * Gets the type of this subprocess.
+     *
+     * @return subprocess type (EXTRACT, TRANSFORM, LOAD, VALIDATE, CLEAN)
+     */
+    SubprocessType getType();
+}
