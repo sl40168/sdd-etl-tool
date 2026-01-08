@@ -1,6 +1,6 @@
-## Phase II: Extract Source Data From COS
+## Phase II: Extract Build **Xbond Quote** Data from COS for ETL
 
-This is phase II for ETL tool. In this phase, we need Data Extractor against COS. COS(Cloud Object Storage) is a file system provided by Tencent, in which the files are stored in the sub directors of given bucket.
+This is phase II for ETL tool. In this phase, we need to extract **Xbond Quote** data from COS. COS(Cloud Object Storage) is a file system provided by Tencent, in which the files are stored in the sub directors of given bucket.
 
 ## I. A common Extractor API is needed
 

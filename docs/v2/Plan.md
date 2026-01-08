@@ -1,4 +1,4 @@
-## Phase 2: Build Data Extractor from COS for ETL
+## Phase 2: Build Xbond Quote Data Extractor from COS for ETL
 
 In this phase, we will start to build data extractor from COS data source. COS(Cloud Object Storage) is provided by Tencent and data is stored as csv file format below directories.
 
@@ -29,9 +29,9 @@ What we need to do in this phase include:
 5. The filter condition of COS is `/CATEGORY/BUSINESS_DATE`, but **NOTE** the format of `BUSINESS_DATE` may be different in concrete extractors.
 6. The `LOCAL_STORAGE` is `/BUSINESS_DATE/CATEGORY` for any concrete extractor, and the format of `BUSINESS_DATE` **MUST** be `YYYYMMDD`
 
-## III. Provide a concrete implementation for Xbond Quote Data Source
+## III. Provide a concrete implementation for **Xbond Quote** Data Source
 
-1. Xbond Quote Data **MUST** be extracted by an extension of base COS Extractor
+1. **Xbond Quote** Data **MUST** be extracted by an extension of base COS Extractor
 2. The `CATEGORY` of Xbond Quote is `AllPriceDepth` and the format of `BUSINESS_DATE` is `YYYYMMDD`
 3. Data structure of CSV is as below, which is raw data
 ```csv
