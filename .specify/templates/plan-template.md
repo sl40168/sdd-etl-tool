@@ -31,7 +31,20 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Refer to `.specify/memory/constitution.md` for current project principles. Gates include:
+
+- Java 8 platform compliance
+- Maven build tool usage
+- CLI interface only (no GUI/Web)
+- INI configuration format
+- Component boundary clarity
+- TDD with >60% coverage
+- Bug fix version recording
+- Third-party library usage
+- Full build/test pass
+- Protected files restriction
+
+Any violations MUST be documented in the Complexity Tracking section below.
 
 ## Project Structure
 
