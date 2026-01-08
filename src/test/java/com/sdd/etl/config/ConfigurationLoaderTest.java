@@ -64,6 +64,29 @@ public class ConfigurationLoaderTest {
     }
 
     @Test
+    public void testParseSources_MultipleSources() throws ConfigurationException {
+        INIConfiguration iniConfig = mock(INIConfiguration.class);
+        when(iniConfig.getInt("sources.count", 0)).thenReturn(2);
+
+        when(iniConfig.getString("source1.name")).thenReturn("source1");
+        when(iniConfig.getString("source1.type")).thenReturn("JDBC");
+        when(iniConfig.getString("source1.connectionString")).thenReturn("jdbc:mysql://localhost:3306/db1");
+        when(iniConfig.getString("source1.primaryKeyField")).thenReturn("id");
+
+        when(iniConfig.getString("source2.name")).thenReturn("source2");
+        when(iniConfig.getString("source2.type")).thenReturn("JDBC");
+        when(iniConfig.getString("source2.connectionString")).thenReturn("jdbc:mysql://localhost:3306/db2");
+        when(iniConfig.getString("source2.primaryKeyField")).thenReturn("id");
+
+        ETConfiguration config = new ETConfiguration();
+        loader.parseSources(iniConfig, config);
+
+        assertEquals("Should parse 2 sources", 2, config.getSources().size());
+        assertEquals("First source name should match", "source1", config.getSources().get(0).getName());
+        assertEquals("Second source name should match", "source2", config.getSources().get(1).getName());
+    }
+
+    @Test
     public void testParseTargets() throws ConfigurationException {
         INIConfiguration iniConfig = mock(INIConfiguration.class);
         when(iniConfig.getInt("targets.count", 0)).thenReturn(1);
@@ -78,6 +101,29 @@ public class ConfigurationLoaderTest {
         assertEquals("Should parse 1 target", 1, config.getTargets().size());
         assertEquals("Target name should match", "target1", config.getTargets().get(0).getName());
         assertEquals("Batch size should match", 500, config.getTargets().get(0).getBatchSize());
+    }
+
+    @Test
+    public void testParseTargets_MultipleTargets() throws ConfigurationException {
+        INIConfiguration iniConfig = mock(INIConfiguration.class);
+        when(iniConfig.getInt("targets.count", 0)).thenReturn(2);
+
+        when(iniConfig.getString("target1.name")).thenReturn("target1");
+        when(iniConfig.getString("target1.type")).thenReturn("JDBC");
+        when(iniConfig.getString("target1.connectionString")).thenReturn("jdbc:mysql://localhost:3306/db1");
+        when(iniConfig.getInt("target1.batchSize", 1000)).thenReturn(500);
+
+        when(iniConfig.getString("target2.name")).thenReturn("target2");
+        when(iniConfig.getString("target2.type")).thenReturn("JDBC");
+        when(iniConfig.getString("target2.connectionString")).thenReturn("jdbc:mysql://localhost:3306/db2");
+        when(iniConfig.getInt("target2.batchSize", 1000)).thenReturn(1000);
+
+        ETConfiguration config = new ETConfiguration();
+        loader.parseTargets(iniConfig, config);
+
+        assertEquals("Should parse 2 targets", 2, config.getTargets().size());
+        assertEquals("First target name should match", "target1", config.getTargets().get(0).getName());
+        assertEquals("Second target name should match", "target2", config.getTargets().get(1).getName());
     }
 
     @Test

@@ -29,20 +29,30 @@ public class SubprocessExecutor {
     }
 
     /**
+     * Validates context state before subprocess execution.
+     *
+     * @param subprocess subprocess to validate context for
+     * @param context    ETL context to validate
+     * @throws ETLException if context validation fails
+     */
+    private void validateContextBeforeExecution(SubprocessInterface subprocess, ETLContext context) throws ETLException {
+        subprocess.validateContext(context);
+    }
+
+    /**
      * Executes a single subprocess with context validation.
      *
      * @param subprocess subprocess to execute
      * @param context    ETL context containing execution state
-     * @return subprocess result
-     * @throws ETLException if execution fails
+     * @return subprocess result (success or failure)
      */
-    public SubprocessResult execute(SubprocessInterface subprocess, ETLContext context) throws ETLException {
+    public SubprocessResult execute(SubprocessInterface subprocess, ETLContext context) {
         try {
             // Set current subprocess in context
             context.setCurrentSubprocess(subprocess.getType());
 
             // Validate context before execution
-            subprocess.validateContext(context);
+            validateContextBeforeExecution(subprocess, context);
 
             // Execute subprocess
             int dataCount = subprocess.execute(context);

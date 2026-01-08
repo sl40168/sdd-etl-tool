@@ -64,10 +64,16 @@ public class ConcurrentExecutionDetector {
             // Open file channel and try to acquire exclusive lock
             FileOutputStream fos = new FileOutputStream(lockFile);
             channel = fos.getChannel();
-            lock = channel.tryLock();
+
+            try {
+                lock = channel.tryLock();
+            } catch (java.nio.channels.OverlappingFileLockException e) {
+                // Already locked within this JVM (e.g., another detector instance)
+                lock = null;
+            }
 
             if (lock == null) {
-                // Another process holds the lock
+                // Another process (or another detector in this JVM) holds the lock
                 channel.close();
                 channel = null;
                 return false;

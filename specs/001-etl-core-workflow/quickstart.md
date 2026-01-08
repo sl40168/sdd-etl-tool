@@ -13,7 +13,7 @@ This guide provides a quick start for implementing and testing the ETL Core Work
 ## Prerequisites
 
 - **Java 8** (JDK 1.8.0_xxx)
-- **Maven 3.6+** (or Maven wrapper included in project)
+- **Maven 3.6+**
 - **Git** (for version control)
 
 ---
@@ -32,21 +32,13 @@ git checkout 001-etl-core-workflow
 
 ### 2. Build Project
 
-Using Maven wrapper:
-
-```bash
-# Windows
-mvnw.cmd clean install
-
-# Linux/Mac
-./mvnw clean install
-```
-
-Or using system Maven:
+Using system Maven:
 
 ```bash
 mvn clean install
 ```
+
+> Note: This repository does not include a Maven wrapper by default.
 
 **Expected Output**:
 ```
@@ -59,8 +51,14 @@ mvn clean install
 ### 3. Verify Build
 
 ```bash
-# Check that JAR was created
+# Check that JARs were created
+# Windows (PowerShell)
+dir target\etl-tool-1.0.0.jar
+dir target\etl-tool-1.0.0-jar-with-dependencies.jar
+
+# Linux/Mac
 ls target/etl-tool-1.0.0.jar
+ls target/etl-tool-1.0.0-jar-with-dependencies.jar
 ```
 
 ---
@@ -230,7 +228,7 @@ logLevel=INFO
 #### Single-Day Execution
 
 ```bash
-java -jar target/etl-tool-1.0.0.jar --from 20250101 --to 20250101 --config .etlconfig.ini
+java -jar target/etl-tool-1.0.0-jar-with-dependencies.jar --from 20250101 --to 20250101 --config .etlconfig.ini
 ```
 
 **Expected Output**:
@@ -259,7 +257,7 @@ ETL Process Completed
 #### Multi-Day Execution
 
 ```bash
-java -jar target/etl-tool-1.0.0.jar --from 20250101 --to 20250107 --config .etlconfig.ini
+java -jar target/etl-tool-1.0.0-jar-with-dependencies.jar --from 20250101 --to 20250107 --config .etlconfig.ini
 ```
 
 **Expected Output**:
@@ -300,7 +298,7 @@ ETL Process Completed
 ### 3. View Help
 
 ```bash
-java -jar target/etl-tool-1.0.0.jar --help
+java -jar target/etl-tool-1.0.0-jar-with-dependencies.jar --help
 ```
 
 **Expected Output**:
@@ -308,7 +306,7 @@ java -jar target/etl-tool-1.0.0.jar --help
 ETL Tool - Extract, Transform, Load data across multiple dates
 
 Usage:
-  java -jar etl-tool-1.0.0.jar --from <YYYYMMDD> --to <YYYYMMDD> --config <path>
+  java -jar etl-tool-1.0.0-jar-with-dependencies.jar --from <YYYYMMDD> --to <YYYYMMDD> --config <path>
 
 Required Parameters:
   --from <YYYYMMDD>    Inclusive start date (format: YYYYMMDD)
@@ -319,8 +317,8 @@ Optional Parameters:
   --help               Display this help message
 
 Examples:
-  java -jar etl-tool-1.0.0.jar --from 20250101 --to 20250107 --config /path/to/config.ini
-  java -jar etl-tool-1.0.0.jar --help
+  java -jar etl-tool-1.0.0-jar-with-dependencies.jar --from 20250101 --to 20250107 --config /path/to/config.ini
+  java -jar etl-tool-1.0.0-jar-with-dependencies.jar --help
 
 Exit Codes:
   0 - Success
@@ -338,7 +336,7 @@ Exit Codes:
 ### 1. Invalid Date Format
 
 ```bash
-java -jar target/etl-tool-1.0.0.jar --from 2025-01-01 --to 20250107 --config .etlconfig.ini
+java -jar target/etl-tool-1.0.0-jar-with-dependencies.jar --from 2025-01-01 --to 20250107 --config .etlconfig.ini
 ```
 
 **Expected Output**:
@@ -355,7 +353,7 @@ Provided value: 2025-01-01
 ### 2. Invalid Date Range
 
 ```bash
-java -jar target/etl-tool-1.0.0.jar --from 20250107 --to 20250101 --config .etlconfig.ini
+java -jar target/etl-tool-1.0.0-jar-with-dependencies.jar --from 20250107 --to 20250101 --config .etlconfig.ini
 ```
 
 **Expected Output**:
@@ -371,7 +369,7 @@ From date (20250107) must be before or equal to To date (20250101).
 ### 3. Missing Configuration File
 
 ```bash
-java -jar target/etl-tool-1.0.0.jar --from 20250101 --to 20250107 --config /nonexistent/config.ini
+java -jar target/etl-tool-1.0.0-jar-with-dependencies.jar --from 20250101 --to 20250107 --config /nonexistent/config.ini
 ```
 
 **Expected Output**:
@@ -388,10 +386,10 @@ Path: /nonexistent/config.ini
 
 ```bash
 # Terminal 1
-java -jar target/etl-tool-1.0.0.jar --from 20250101 --to 20250107 --config .etlconfig.ini
+java -jar target/etl-tool-1.0.0-jar-with-dependencies.jar --from 20250101 --to 20250107 --config .etlconfig.ini
 
 # Terminal 2 (while Terminal 1 is still running)
-java -jar target/etl-tool-1.0.0.jar --from 20250108 --to 20250114 --config .etlconfig.ini
+java -jar target/etl-tool-1.0.0-jar-with-dependencies.jar --from 20250108 --to 20250114 --config .etlconfig.ini
 ```
 
 **Expected Output (Terminal 2)**:
@@ -409,7 +407,7 @@ Lock file: <path>/.etl.lock
 
 ```bash
 # Configuration has unreachable source
-java -jar target/etl-tool-1.0.0.jar --from 20250101 --to 20250107 --config .etlconfig.ini
+java -jar target/etl-tool-1.0.0-jar-with-dependencies.jar --from 20250101 --to 20250107 --config .etlconfig.ini
 ```
 
 **Expected Output**:
@@ -473,7 +471,7 @@ Detailed logs are written to the file specified in configuration (default: `./et
 ### 2. Debugging
 
 1. Enable DEBUG logging in `logback.xml`
-2. Run with verbose output: `java -jar etl-tool-1.0.0.jar --from 20250101 --to 20250101 --config .etlconfig.ini`
+2. Run with verbose output: `java -jar etl-tool-1.0.0-jar-with-dependencies.jar --from 20250101 --to 20250101 --config .etlconfig.ini`
 3. Check log file: `etl.log`
 4. Use context snapshots for debugging (logged on error)
 
@@ -553,7 +551,7 @@ del .etl.lock  # Windows
 
 **Solution**: Use absolute path to configuration file:
 ```bash
-java -jar target/etl-tool-1.0.0.jar --from 20250101 --to 20250107 --config C:\path\to\.etlconfig.ini
+java -jar target/etl-tool-1.0.0-jar-with-dependencies.jar --from 20250101 --to 20250107 --config C:\path\to\.etlconfig.ini
 ```
 
 ---

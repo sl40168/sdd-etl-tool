@@ -47,10 +47,10 @@ public class DailyETLWorkflow {
 
         try {
             // Create context for the day
-            ETLContext context = ContextManager.createContext(date, config);
+            ETLContext context = createContext(date, config);
 
             // Validate initial context state
-            ContextManager.validateContext(context);
+            validateInitialState(context);
 
             // Log start of day processing
             ETLogger.info("Processing date: " + date);
@@ -72,7 +72,7 @@ public class DailyETLWorkflow {
             result.setSuccess(true);
 
             // Log day completion
-            statusLogger.logDayCompletion(date, subprocessResults.size(), true);
+            logCompletion(result);
 
             return result;
 
@@ -84,7 +84,7 @@ public class DailyETLWorkflow {
             statusLogger.logError(date, e.getSubprocessType(), e.getMessage());
 
             // Log day completion with failure
-            statusLogger.logDayCompletion(date, 5, false);
+            logCompletion(result);
 
             return result;
         }
@@ -110,13 +110,40 @@ public class DailyETLWorkflow {
     }
 
     /**
+     * Creates context for the day. Override in tests to provide mock context.
+     *
+     * @param date processing date in YYYYMMDD format
+     * @param config ETL configuration object
+     * @return ETL context for the day
+     */
+    protected ETLContext createContext(String date, ETConfiguration config) {
+        return ContextManager.createContext(date, config);
+    }
+
+    /**
      * Logs completion of day's workflow with subprocess results.
      *
      * @param result      DailyProcessResult with all subprocess results
      */
     private void logCompletion(DailyProcessResult result) {
-        // Subprocess results are already logged by SubprocessExecutor
-        // This method can be used for additional logging if needed
+        boolean success = result.isSuccess();
+        String date = result.getDate();
+        Map<String, SubprocessResult> subprocessResults = result.getSubprocessResults();
+        
+        // Log day completion summary
+        ETLogger.info("Day " + date + " processing " + (success ? "succeeded" : "failed"));
+        ETLogger.info("Total subprocesses executed: " + subprocessResults.size());
+        
+        // Log each subprocess result
+        for (Map.Entry<String, SubprocessResult> entry : subprocessResults.entrySet()) {
+            SubprocessResult sr = entry.getValue();
+            ETLogger.info("  " + entry.getKey() + ": " + 
+                (sr.isSuccess() ? "success (" + sr.getDataCount() + " records)" : 
+                                 "failed - " + sr.getErrorMessage()));
+        }
+        
+        // Also log via StatusLogger for structured logging
+        statusLogger.logDayCompletion(date, subprocessResults.size(), success);
     }
 
     /**
@@ -126,7 +153,7 @@ public class DailyETLWorkflow {
      *
      * @return list of subprocesses in execution order
      */
-    private List<SubprocessInterface> createSubprocesses() {
+    protected List<SubprocessInterface> createSubprocesses() {
         // For this phase, we create placeholder implementations
         // Concrete implementations will be added in future phases
         return new ArrayList<>();

@@ -54,33 +54,38 @@ public class ContextManager {
      * @throws IllegalArgumentException if context is invalid
      */
     public static void validateContext(ETLContext context) {
-        if (context == null) {
-            throw new IllegalArgumentException("Context cannot be null");
-        }
+        try {
+            if (context == null) {
+                throw new IllegalArgumentException("Context cannot be null");
+            }
 
-        if (context.getCurrentDate() == null || context.getCurrentDate().isEmpty()) {
-            throw new IllegalArgumentException("Current date must be set");
-        }
+            if (context.getCurrentDate() == null || context.getCurrentDate().isEmpty()) {
+                throw new IllegalArgumentException("Current date must be set");
+            }
 
-        if (context.getConfig() == null) {
-            throw new IllegalArgumentException("Configuration must be set");
-        }
+            if (context.getConfig() == null) {
+                throw new IllegalArgumentException("Configuration must be set");
+            }
 
-        if (context.getCurrentSubprocess() == null) {
-            throw new IllegalArgumentException("Current subprocess must be set");
-        }
+            if (context.getCurrentSubprocess() == null) {
+                throw new IllegalArgumentException("Current subprocess must be set");
+            }
 
-        // Validate counters are non-negative
-        if (context.getExtractedDataCount() < 0) {
-            throw new IllegalArgumentException("Extracted data count must be >= 0");
-        }
+            // Validate counters are non-negative
+            if (context.getExtractedDataCount() < 0) {
+                throw new IllegalArgumentException("Extracted data count must be >= 0");
+            }
 
-        if (context.getTransformedDataCount() < 0) {
-            throw new IllegalArgumentException("Transformed data count must be >= 0");
-        }
+            if (context.getTransformedDataCount() < 0) {
+                throw new IllegalArgumentException("Transformed data count must be >= 0");
+            }
 
-        if (context.getLoadedDataCount() < 0) {
-            throw new IllegalArgumentException("Loaded data count must be >= 0");
+            if (context.getLoadedDataCount() < 0) {
+                throw new IllegalArgumentException("Loaded data count must be >= 0");
+            }
+        } catch (IllegalArgumentException e) {
+            com.sdd.etl.logging.ETLogger.error("Context validation failed: " + e.getMessage());
+            throw e;
         }
     }
 

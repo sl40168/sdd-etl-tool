@@ -92,6 +92,12 @@ public class ConfigurationLoader {
             source.setExtractQuery(iniConfig.getString(sectionKey + ".extractQuery"));
             source.setDateField(iniConfig.getString(sectionKey + ".dateField"));
 
+            if (!source.isValid()) {
+                throw new ConfigurationException(
+                        "Invalid source configuration in section [" + sectionKey + "]: "
+                                + "name/type/connectionString/primaryKeyField are required");
+            }
+
             config.addSource(source);
         }
     }
@@ -118,6 +124,12 @@ public class ConfigurationLoader {
             target.setType(iniConfig.getString(sectionKey + ".type"));
             target.setConnectionString(iniConfig.getString(sectionKey + ".connectionString"));
             target.setBatchSize(iniConfig.getInt(sectionKey + ".batchSize", 1000));
+
+            if (!target.isValid()) {
+                throw new ConfigurationException(
+                        "Invalid target configuration in section [" + sectionKey + "]: "
+                                + "name/type/connectionString are required and batchSize must be > 0");
+            }
 
             config.addTarget(target);
         }

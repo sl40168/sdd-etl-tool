@@ -1,22 +1,6 @@
 package com.sdd.etl.cli;
 
-import com.sdd.etl.ETLException;
-import com.sdd.etl.config.ETConfiguration;
-import com.sdd.etl.context.ETLContext;
-import com.sdd.etl.context.SubprocessType;
 import com.sdd.etl.model.CommandLineArguments;
-import com.sdd.etl.model.DailyProcessResult;
-import com.sdd.etl.model.SubprocessResult;
-import com.sdd.etl.model.WorkflowResult;
-import com.sdd.etl.subprocess.ExtractSubprocess;
-import com.sdd.etl.subprocess.LoadSubprocess;
-import com.sdd.etl.subprocess.SubprocessInterface;
-import com.sdd.etl.subprocess.ValidateSubprocess;
-import com.sdd.etl.subprocess.CleanSubprocess;
-import com.sdd.etl.util.DateRangeGenerator;
-import com.sdd.etl.util.ConcurrentExecutionDetector;
-import com.sdd.etl.logging.StatusLogger;
-import com.sdd.etl.logging.ETLogger;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -123,9 +107,9 @@ public class CommandLineValidator {
             errors.add("Configuration file not found or not readable. Path: " + arguments.getConfigPath());
         }
 
-        // Validate date range
+        // Validate date range (only if both dates have valid format)
         if (errors.isEmpty() && !validateDateRange(arguments.getFromDate(), arguments.getToDate())) {
-            errors.add("Invalid date range");
+            errors.add("Invalid date range: --from date must be less than or equal to --to date");
         }
 
         return errors;

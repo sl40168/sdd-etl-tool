@@ -13,6 +13,10 @@ public interface SubprocessInterface {
     /**
      * Executes the subprocess.
      *
+     * <p>Performance note: for large daily volumes (1M+ records), implementations should avoid
+     * loading all records into memory at once. Prefer batching/streaming where possible and use
+     * configuration hints (e.g., {@code TargetConfig.batchSize}) to size I/O operations.</p>
+     *
      * @param context ETL context containing execution state
      * @return number of records processed (depends on subprocess type)
      * @throws ETLException if subprocess execution fails

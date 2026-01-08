@@ -7,13 +7,7 @@ import com.sdd.etl.logging.ETLogger;
 import com.sdd.etl.logging.StatusLogger;
 import com.sdd.etl.model.CommandLineArguments;
 import com.sdd.etl.model.WorkflowResult;
-import com.sdd.etl.subprocess.ExtractSubprocess;
-import com.sdd.etl.subprocess.TransformSubprocess;
-import com.sdd.etl.subprocess.LoadSubprocess;
-import com.sdd.etl.subprocess.ValidateSubprocess;
-import com.sdd.etl.subprocess.CleanSubprocess;
 import com.sdd.etl.util.ConcurrentExecutionDetector;
-import com.sdd.etl.util.DateRangeGenerator;
 import com.sdd.etl.workflow.DailyETLWorkflow;
 import com.sdd.etl.workflow.SubprocessExecutor;
 import com.sdd.etl.workflow.WorkflowEngine;
@@ -26,7 +20,6 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -36,6 +29,13 @@ import java.util.List;
 public class ETLCommandLine {
 
     private static final String VERSION = "1.0.0";
+
+    private static final int EXIT_SUCCESS = 0;
+    private static final int EXIT_INPUT_VALIDATION = 1;
+    private static final int EXIT_CONCURRENT = 2;
+    private static final int EXIT_PROCESS_ERROR = 3;
+    private static final int EXIT_CONFIG_ERROR = 4;
+    private static final int EXIT_UNEXPECTED = 5;
 
     /**
      * Main method - entry point for CLI tool.
@@ -50,7 +50,7 @@ public class ETLCommandLine {
             // Check if help was requested
             if (arguments.isHelpRequested()) {
                 displayHelp();
-                System.exit(0);
+                System.exit(EXIT_SUCCESS);
             }
 
             // Validate and execute
@@ -58,7 +58,7 @@ public class ETLCommandLine {
 
         } catch (Exception e) {
             ETLogger.error("Unexpected error: " + e.getMessage(), e);
-            System.exit(5);
+            System.exit(EXIT_UNEXPECTED);
         }
     }
 
@@ -151,7 +151,7 @@ public class ETLCommandLine {
         System.out.println("ETL Tool - Extract, Transform, Load data across multiple dates");
         System.out.println();
         System.out.println("Usage:");
-        System.out.println("  java -jar etl-tool-1.0.0.jar --from <YYYYMMDD> --to <YYYYMMDD> --config <path>");
+        System.out.println("  java -jar etl-tool-" + VERSION + "-jar-with-dependencies.jar --from <YYYYMMDD> --to <YYYYMMDD> --config <path>");
         System.out.println();
         System.out.println("Required Parameters:");
         System.out.println("  --from <YYYYMMDD>    Inclusive start date (format: YYYYMMDD)");
@@ -162,8 +162,8 @@ public class ETLCommandLine {
         System.out.println("  --help               Display this help message");
         System.out.println();
         System.out.println("Examples:");
-        System.out.println("  java -jar etl-tool-1.0.0.jar --from 20250101 --to 20250107 --config /path/to/config.ini");
-        System.out.println("  java -jar etl-tool-1.0.0.jar --help");
+        System.out.println("  java -jar etl-tool-" + VERSION + "-jar-with-dependencies.jar --from 20250101 --to 20250107 --config /path/to/config.ini");
+        System.out.println("  java -jar etl-tool-" + VERSION + "-jar-with-dependencies.jar --help");
         System.out.println();
         System.out.println("Exit Codes:");
         System.out.println("  0 - Success");
@@ -182,6 +182,14 @@ public class ETLCommandLine {
     private static void validateAndExecute(CommandLineArguments arguments) {
         CommandLineValidator validator = new CommandLineValidator();
 
+        // Security: sanitize config path input early
+        try {
+            arguments.setConfigPath(sanitizeConfigPath(arguments.getConfigPath()));
+        } catch (IllegalArgumentException e) {
+            ETLogger.error("Input validation failed: " + e.getMessage());
+            System.exit(EXIT_INPUT_VALIDATION);
+        }
+
         // Validate all arguments
         List<String> errors = validator.validateAll(arguments);
 
@@ -191,7 +199,7 @@ public class ETLCommandLine {
             for (String error : errors) {
                 ETLogger.error("  " + error);
             }
-            System.exit(1);
+            System.exit(EXIT_INPUT_VALIDATION);
         }
 
         // Detect concurrent execution
@@ -200,7 +208,7 @@ public class ETLCommandLine {
             ETLogger.error("Another ETL process is already running.");
             ETLogger.error("Please wait for it to complete before starting a new process.");
             ETLogger.error("Lock file: " + detector.getLockFilePath());
-            System.exit(2);
+            System.exit(EXIT_CONCURRENT);
         }
 
         try {
@@ -230,28 +238,64 @@ public class ETLCommandLine {
 
             // Check final result
             if (result.isSuccess()) {
-                System.exit(0);
+                System.exit(EXIT_SUCCESS);
             } else {
                 ETLogger.error("ETL process failed. See logs for details.");
-                System.exit(3);
+                System.exit(EXIT_PROCESS_ERROR);
             }
 
         } catch (ETLException e) {
-            ETLogger.error("ETL process error: " + e.getMessage());
+            boolean isConfigError = isConfigurationError(e);
+
+            if (isConfigError) {
+                ETLogger.error("Configuration error: " + e.getMessage());
+            } else {
+                ETLogger.error("ETL process error: " + e.getMessage());
+            }
+
             ETLogger.error("  Subprocess: " + e.getSubprocessType());
             ETLogger.error("  Date: " + e.getDate());
             if (e.getRootCause() != null) {
                 ETLogger.error("  Root Cause: " + e.getRootCause().getMessage());
             }
-            System.exit(3);
+
+            System.exit(isConfigError ? EXIT_CONFIG_ERROR : EXIT_PROCESS_ERROR);
 
         } catch (Exception e) {
-            ETLogger.error("Configuration error: " + e.getMessage(), e);
-            System.exit(4);
+            ETLogger.error("Unexpected error: " + e.getMessage(), e);
+            System.exit(EXIT_UNEXPECTED);
 
         } finally {
             // Release lock
             detector.releaseLock();
         }
+    }
+
+    private static boolean isConfigurationError(ETLException e) {
+        if (e == null) {
+            return false;
+        }
+
+        String type = e.getSubprocessType();
+        if (type == null) {
+            return false;
+        }
+
+        return "CONFIG".equalsIgnoreCase(type) || "CONFIGURATION".equalsIgnoreCase(type);
+    }
+
+    private static String sanitizeConfigPath(String configPath) {
+        if (configPath == null) {
+            return null;
+        }
+
+        String trimmed = configPath.trim();
+
+        // Reject control characters and null bytes
+        if (trimmed.indexOf('\u0000') >= 0 || trimmed.indexOf('\n') >= 0 || trimmed.indexOf('\r') >= 0) {
+            throw new IllegalArgumentException("Config path contains invalid control characters");
+        }
+
+        return trimmed;
     }
 }

@@ -108,7 +108,20 @@ public class WorkflowEngine {
      * @return DailyProcessResult for the date
      */
     DailyProcessResult executeDay(String date, ETConfiguration config) {
-        return dailyWorkflow.execute(date, config);
+        // Log day start
+        ETLogger.info("Starting day processing: " + date);
+
+        try {
+            // DailyETLWorkflow is responsible for per-day subprocess logging.
+            return dailyWorkflow.execute(date, config);
+
+        } catch (Exception e) {
+            // Log day failure and return a failed result to stop processing.
+            statusLogger.logError(date, null, "Day processing failed: " + e.getMessage());
+            DailyProcessResult failed = new DailyProcessResult(date);
+            failed.setSuccess(false);
+            return failed;
+        }
     }
 
     /**

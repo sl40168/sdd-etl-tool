@@ -26,9 +26,19 @@
         </filter>
     </appender>
 
+    <!-- File appender for integration tests -->
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>target/test-etl.log</file>
+        <append>false</append>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
     <!-- Root logger set to DEBUG for testing -->
     <root level="DEBUG">
         <appender-ref ref="STDOUT" />
         <appender-ref ref="STDERR" />
+        <appender-ref ref="FILE" />
     </root>
 </configuration>
