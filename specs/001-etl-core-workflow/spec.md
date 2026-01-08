@@ -103,6 +103,23 @@ As a data engineer, I want the ETL process to log status updates to both file an
 
 ---
 
+### User Story 7 - Context-Based Data Transfer (Priority: P1)
+
+As a data engineer, I want all sub-components to use context to transfer data between each other, so that the system has a standardized, maintainable data flow architecture.
+
+**Why this priority**: This is a critical architectural requirement that ensures consistency and maintainability across the entire ETL system. Without standardized context-based data transfer, components would have tight coupling through direct method calls, making the system brittle and difficult to maintain.
+
+**Independent Test**: Can be fully tested by verifying that subprocess components receive data from context rather than through direct method calls or parameter passing. Delivers immediate value by establishing a clear, maintainable data flow pattern.
+
+**Acceptance Scenarios**:
+
+1. **Given** multiple sub-components in the ETL pipeline, **When** data needs to be passed between them, **Then** all data transfer MUST occur through the context mechanism, not through direct method calls or parameter passing
+2. **Given** the extract subprocess completes, **When** it passes extracted data to the transform subprocess, **Then** the data MUST be written to and read from context, not passed directly as a method parameter
+3. **Given** the transform subprocess completes, **When** it passes transformed data to the load subprocess, **Then** the data MUST be written to and read from context, not passed directly as a method parameter
+4. **Given** a new sub-component is added to the pipeline, **When** it needs to access or share data, **Then** it MUST use context for all data transfer operations
+
+---
+
 ### Edge Cases
 
 - What happens when the from date is after the to date? (Invalid date range)
@@ -113,6 +130,8 @@ As a data engineer, I want the ETL process to log status updates to both file an
 - How does system handle concurrent executions for overlapping date ranges? (Concurrency scenario)
 - What happens when disk space is insufficient during the process? (Resource exhaustion)
 - What happens when another ETL process is already running? (Concurrent execution detection)
+- What happens when context data is corrupted or contains invalid values? (Context integrity)
+- What information should be provided to users when a process fails to help them manually restart? (Recovery guidance)
 
 ## Clarifications
 
@@ -124,6 +143,24 @@ As a data engineer, I want the ETL process to log status updates to both file an
 - Q: How should the system handle concurrent execution with overlapping date ranges? → A: Detect and reject starting second process
 - Q: What is the specific volume threshold for "reasonable data volume bounds"? → A: Up to 1 million records per day
 - Q: What is the configuration file format priority? → A: INI format only
+- Q: When a day's process fails, how should recovery work after user fixes the issue? → A: User restarts by themselves with full manual handling
+- Q: How should the system protect sensitive information in configuration files? → A: Pure text storage; users are Production Support, no additional protection needed
+- Q: What functionality is explicitly out of scope? → A: Real-time monitoring dashboard, data visualization, automatic error recovery, distributed processing, incremental updates, data lineage tracking
+
+## Out of Scope *(optional)*
+
+The following functionality is explicitly NOT included in this implementation:
+
+- Real-time monitoring dashboard or UI
+- Data visualization or reporting capabilities
+- Automatic error recovery or retry mechanisms
+- Distributed or multi-process processing
+- Incremental data updates or change data capture (CDC)
+- Data lineage tracking or impact analysis
+- Scheduled or automated execution (beyond manual CLI invocation)
+- Advanced data quality monitoring beyond basic validation
+- Performance profiling or optimization tools
+- Data catalog or metadata management
 
 ## Requirements *(mandatory)*
 
@@ -155,6 +192,11 @@ As a data engineer, I want the ETL process to log status updates to both file an
 - **FR-024**: Tool MUST detect concurrent execution and reject starting a second ETL process if another process is already running
 - **FR-025**: Tool MUST NOT automatically retry failed subprocesses; failures require user intervention to resolve
 - **FR-026**: Configuration file MUST be in INI format and contain authentication credentials for data sources
+- **FR-027**: All sub-components (extract, transform, load, validate, clean) MUST use context to transfer data between each other; direct method calls for data transfer are prohibited
+- **FR-028**: The extract subprocess MUST write extracted data to context and the transform subprocess MUST read this data from context
+- **FR-029**: The transform subprocess MUST write transformed data to context and the load subprocess MUST read this data from context
+- **FR-030**: The load subprocess MUST write load results (e.g., count of records loaded) to context and the validate subprocess MUST read this information from context
+- **FR-031**: The validate subprocess MUST write validation results to context and the clean subprocess MUST read this information from context
 
 ### Key Entities
 
@@ -179,11 +221,13 @@ As a data engineer, I want the ETL process to log status updates to both file an
 - **SC-008**: System processes date ranges of up to 30 consecutive days without manual intervention or process interruption
 - **SC-009**: Help command displays clear, complete usage information that enables first-time users to successfully run the tool within 5 minutes
 - **SC-010**: API components (subprocess APIs and ETL API) are defined and can be invoked to execute subprocesses and day processes, enabling future implementation
+- **SC-011**: All sub-components use context for data transfer with 100% compliance; no direct method calls or parameter passing are used for data transfer between components
+- **SC-012**: Data flows correctly through context across all subprocesses, with extract writing to context, transform reading from and writing to context, load reading from and writing to context, and validate writing to context, with zero data loss or corruption in the transfer
 
 ## Assumptions
 
 - Configuration file format is INI (industry-standard for simple configuration)
-- Authentication credentials for data sources are stored in the INI configuration file
+- Authentication credentials for data sources are stored in the INI configuration file in plain text; no additional encryption or protection is required as users are Production Support personnel
 - Status log files will be written to a configurable or default directory
 - Error handling will include descriptive error messages for troubleshooting
 - Data volume per day is up to 1 million records, within reasonable bounds for single-machine processing (not distributed processing scale)
@@ -194,5 +238,6 @@ As a data engineer, I want the ETL process to log status updates to both file an
 - Clean subprocess handles temporary file deletion and resource cleanup
 - The tool runs as a single process (not distributed or multi-process)
 - Subprocess failures are fatal to the day's process (no partial success scenarios)
+- When a day's process fails, users must manually restart the entire process; the system does not provide automatic recovery or resume capabilities
 - Unique records across different data sources are identified using configurable, source-specific primary key fields defined in the configuration file
 - Concurrent executions are detected and prevented; only one ETL process can run at a time
