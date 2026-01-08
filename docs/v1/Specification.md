@@ -2,6 +2,8 @@ This project will build a ETL tool, which help you to extract data from differen
 
 In this phase, we will focus on the API, Data Model, CLI interface and work flow design ONLY. **No concrete implementation** is required at this phase, **EXCEPT** the work flow.
 
+## Phase 1: API/Data Model Design
+
 ## I. CLI Interface
 
 1. 3 parameters are required to start the tool:
@@ -11,6 +13,12 @@ In this phase, we will focus on the API, Data Model, CLI interface and work flow
     - `--to`: a date string in format `YYYYMMDD`, to indicate before which date(included), the data **SHOULD** be extracted.
 
     - `--config`: a path to the configuration file, which contains the source, target and transform configuration.
+
+2. 1 command is required to supported by the tool:
+
+    - `--help`: print the help message.
+
+3. All user input must be validated.
 
 ## II. Work Flow
 
@@ -37,6 +45,8 @@ In this phase, we will focus on the API, Data Model, CLI interface and work flow
 1. A context **MUST** be created for each day's process, which contains the current day's date, the current sub process, the number of data had been extracted, transformed and loaded, the configure which contains the source, target and transform configuration.
 
 2. A context **MUST** be passed to each sub process.
+
+3. All sub components **MUST** use context to transfer data.
 
 ## V. APIs
 
