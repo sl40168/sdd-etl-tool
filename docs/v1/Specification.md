@@ -46,6 +46,8 @@ In this phase, we will focus on the API, Data Model, CLI interface and work flow
 
 2. A context **MUST** be passed to each sub process.
 
+3. All sub components **MUST** use context to transfer data.
+
 ## V. APIs
 
 1. A component API **MUST** be created for each sub process, which contains the sub process logic and the context.
