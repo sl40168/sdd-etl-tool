@@ -1,309 +1,252 @@
-# Research: ETL Core Workflow
+# Research Report: ETL Core Workflow
 
-**Feature**: ETL Core Workflow  
-**Date**: January 8, 2026  
-**Purpose**: Research technology choices and patterns for implementing ETL core workflow in Java 8
+**Feature Branch**: `001-etl-core-workflow`
+**Date**: 2026-01-08
+**Status**: Complete
 
-## Research Topics
+## Overview
 
-### 1. CLI Library for Java 8
+This research report documents technology choices and architectural decisions for the ETL Core Workflow feature. All research items from the Technical Context have been resolved.
 
-**Decision**: Apache Commons CLI 1.4
+## Technology Decisions
 
-**Rationale**: 
-- Well-established, stable library compatible with Java 8
-- Lightweight with minimal dependencies
-- Provides robust argument parsing, validation, and help message generation
-- Industry standard for Java CLI tools
-- Active community and comprehensive documentation
+### 1. CLI Library: Apache Commons CLI
 
-**Alternatives Considered**:
-- **Picocli**: More modern features but requires Java 8+ compatibility verification; larger footprint
-- **Args4j**: Annotation-based but less actively maintained
-- **Manual parsing**: Would require significant development effort and validation logic
-
----
-
-### 2. INI File Parsing for Java 8
-
-**Decision**: ini4j 0.5.4
+**Decision**: Apache Commons CLI will be used for command-line argument parsing.
 
 **Rationale**:
-- Mature, stable library specifically designed for INI file parsing
-- Java 8 compatible
-- Simple API for reading and writing INI files
-- Supports sections, key-value pairs, and comments
-- Lightweight with minimal dependencies
+- Mature, stable library with long-standing presence in Java ecosystem
+- Excellent documentation and community support
+- Java 8 compatible (no conflicts with constitution requirement)
+- Supports complex option types (required, optional, arguments)
+- Built-in help text generation capability (FR-003)
+- Lightweight with no unnecessary dependencies
 
 **Alternatives Considered**:
-- **Apache Commons Configuration**: More feature-rich but heavier weight
-- **Manual parsing**: Would require handling edge cases (comments, sections, escape characters)
-- **System.getProperty()**: Not suitable for complex INI structure with sections
+- **Picocli**: More modern with annotation-based syntax, but may be overkill for simple 3-parameter use case
+- **JCommander**: Good API but less mature than Commons CLI
+- **Custom implementation**: Rejected per constitution principle #8 (use third-party libraries)
 
 ---
 
-### 3. Logging Framework for Java 8
+### 2. INI Configuration Parser: Apache Commons Configuration
 
-**Decision**: SLF4J 1.7.36 + Logback 1.2.12
+**Decision**: Apache Commons Configuration will be used for parsing INI configuration files.
 
 **Rationale**:
-- SLF4J is the de facto standard logging facade for Java
-- Logback is the natural implementation for SLF4J, optimized for performance
-- Both libraries are stable and Java 8 compatible
-- Built-in support for file and console appenders
-- Easy configuration via XML
-- Extensive community support and documentation
+- Specifically designed for INI file format (matches constitution requirement)
+- Provides type-safe access to configuration values
+- Handles nested sections and key-value pairs elegantly
+- Excellent error handling for missing or malformed configuration
+- Java 8 compatible with stable API
+- Well-documented with extensive examples
 
 **Alternatives Considered**:
-- **Log4j 2**: Powerful but had security vulnerabilities (Log4Shell); more complex configuration
-- **java.util.logging**: Built-in but limited functionality and configuration options
-- **Log4j 1.x**: End-of-life and not recommended for new projects
+- **ini4j**: Popular but less actively maintained
+- **Custom implementation**: Rejected per constitution principle #8; would require extensive parsing logic
+- **Java Properties API**: Doesn't support INI format with sections
 
 ---
 
-### 4. Testing Framework for Java 8
+### 3. Logging Framework: SLF4J + Logback
 
-**Decision**: JUnit 4.13.2 + Mockito 3.12.4
+**Decision**: SLF4J as facade with Logback as implementation for logging.
 
 **Rationale**:
-- JUnit 4 is the stable, widely-adopted testing framework for Java 8
-- Mockito is the industry standard for mocking in Java
-- Both libraries are mature, well-documented, and Java 8 compatible
-- Excellent IDE support and integration
-- TDD-friendly with clear assertion and mocking APIs
+- SLF4J provides abstraction layer for future flexibility
+- Logback is the native implementation of SLF4J with excellent performance
+- Supports multiple appenders (console, file) required by FR-016 and FR-017
+- Java 8 compatible with robust async logging capabilities
+- Easy configuration via XML (logback.xml)
+- Widely adopted in enterprise Java applications
 
 **Alternatives Considered**:
-- **JUnit 5**: Modern but requires Java 8+ and may have compatibility issues in some IDEs
-- **TestNG**: Feature-rich but steeper learning curve and less widely adopted
-- **PowerMock**: More powerful for static method mocking but adds complexity
+- **java.util.logging**: Too basic, lacks flexibility
+- **Log4j2**: Good alternative but Logback is more performant and simpler to configure
+- **System.out.println**: Not maintainable; lacks features like log levels, formatting
 
 ---
 
-### 5. Concurrent Execution Detection Pattern
+### 4. Testing Framework: JUnit 4 + Mockito
 
-**Decision**: File-based lock mechanism using java.nio.file
+**Decision**: JUnit 4 with Mockito for unit testing and mocking.
 
 **Rationale**:
-- Simple, cross-platform solution for detecting running ETL processes
-- Uses file locking APIs to attempt exclusive lock acquisition
-- Fails fast with clear error message if another process is running
-- No external dependencies required (uses Java NIO)
-- Automatic cleanup on process termination (OS releases file lock)
-
-**Implementation Pattern**:
-```java
-Path lockFile = Paths.get(System.getProperty("java.io.tmpdir"), "etl-tool.lock");
-try (FileChannel channel = FileChannel.open(lockFile, 
-        StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-     FileLock lock = channel.tryLock()) {
-    if (lock == null) {
-        throw new ETLException("Another ETL process is already running");
-    }
-    // Execute ETL process
-} catch (OverlappingFileLockException e) {
-    throw new ETLException("Another ETL process is already running");
-}
-```
+- JUnit 4 is the standard for Java 8 testing (JUnit 5 requires Java 8+ but JUnit 4 is more stable)
+- Mockito is the de-facto standard for mocking in Java
+- Both have excellent integration with Maven
+- Simple, readable test syntax
+- Strong community support and documentation
+- Meets >60% coverage requirement through comprehensive test assertions
 
 **Alternatives Considered**:
-- **Socket-based detection**: More complex, requires port management
-- **Database-based detection**: Overkill for single-process CLI tool
-- **PID file**: Cross-platform issues with PID detection and stale PID cleanup
+- **TestNG**: Powerful but JUnit 4 is more widely adopted
+- **PowerMock**: Only needed for static/private mocking; not required for this architecture
+- **Spock**: Groovy-based; would introduce another language to the project
 
 ---
 
-### 6. Context Implementation Pattern
+### 5. Context Implementation Pattern: ThreadLocal + HashMap
 
-**Decision**: Immutable POJO with builder pattern
+**Decision**: Context will use ThreadLocal-based storage with HashMap for key-value pairs.
 
 **Rationale**:
-- Ensures thread-safety (important for potential future multi-threading)
-- Clear, readable API for context creation and updates
-- Immutability prevents accidental modification during subprocess execution
-- Builder pattern provides flexibility for optional fields
-- Java 8 compatible (no need for Java 8+ features like records)
+- ThreadLocal ensures thread safety for single-process execution
+- HashMap provides O(1) access for context data retrieval
+- Simple implementation meeting FR-014 through FR-031 requirements
+- Type-safe access can be enforced via wrapper methods
+- No additional dependencies required
+- Meets context-based data transfer requirement (FR-027) without direct method calls
 
-**Implementation Pattern**:
-```java
-public final class DailyProcessContext {
-    private final LocalDate date;
-    private final SubprocessType currentSubprocess;
-    private final int recordsExtracted;
-    private final int recordsTransformed;
-    private final int recordsLoaded;
-    private final Configuration configuration;
-    
-    private DailyProcessContext(Builder builder) { ... }
-    
-    public static Builder builder() { return new Builder(); }
-    
-    // Getters only (no setters)
-    
-    public static class Builder {
-        // Fluent setter methods
-        public Builder date(LocalDate date) { ... }
-        public Builder currentSubprocess(SubprocessType type) { ... }
-        // ...
-        public DailyProcessContext build() { ... }
-    }
-}
-```
+**Key Design Points**:
+- Context is created per day's process (FR-014)
+- Subprocesses write to and read from context (FR-028 through FR-031)
+- Context manager handles lifecycle (creation, cleanup)
+- Immutable context snapshots for debugging/troubleshooting
 
 **Alternatives Considered**:
-- **Mutable POJO**: Simpler but less thread-safe, risk of accidental modification
-- **Map-based context**: Type-unsafe, less maintainable
-- **Record (Java 14+)**: Not Java 8 compatible
+- **DI Framework (Spring/Guice)**: Overkill for single-process CLI tool; violates simplicity principle
+- **Singleton pattern**: Not suitable for multi-day concurrent execution (even though this phase doesn't support it)
+- **Database-backed context**: Unnecessary complexity; file-based logging is sufficient
 
 ---
 
-### 7. Workflow Orchestration Pattern
+### 6. Concurrent Execution Detection: File Lock Mechanism
 
-**Decision**: Strategy pattern for subprocess execution with pipeline chaining
+**Decision**: File lock mechanism using `java.nio.channels.FileLock`.
 
 **Rationale**:
-- Clear separation of concerns: orchestrator manages sequence, subprocesses implement execution
-- Easy to extend with new subprocess types
-- Follows Open/Closed principle (open for extension, closed for modification)
-- Each subprocess has well-defined API (input: Context, output: Context)
-- Facilitates testing (subprocesses can be mocked)
+- Simple, OS-level locking mechanism
+- Works across different platforms (Windows, Linux, macOS)
+- Automatically releases lock when process terminates
+- No external dependencies
+- Meets FR-024 requirement for detecting concurrent executions
+- Lightweight with minimal performance impact
 
-**Implementation Pattern**:
-```java
-public interface Subprocess {
-    String getName();
-    SubprocessType getType();
-    DailyProcessContext execute(DailyProcessContext context) throws SubprocessException;
-}
-
-public class DailyETLWorkflow {
-    private final List<Subprocess> subprocesses;
-    
-    public DailyETLWorkflow(List<Subprocess> subprocesses) {
-        this.subprocesses = Collections.unmodifiableList(subprocesses);
-    }
-    
-    public void execute(LocalDate date, Configuration config) {
-        DailyProcessContext context = DailyProcessContext.builder()
-            .date(date)
-            .configuration(config)
-            .build();
-        
-        for (Subprocess subprocess : subprocesses) {
-            logStart(subprocess);
-            context = subprocess.execute(context);
-            logComplete(subprocess, context);
-        }
-    }
-}
-```
+**Implementation Details**:
+- Lock file created in application directory on startup
+- Attempt to acquire exclusive lock on startup; fail if already held
+- Lock released automatically on JVM exit (finally block)
+- Lock file remains as indicator if process crashes (can be manually removed)
 
 **Alternatives Considered**:
-- **Chain of Responsibility**: More complex than needed for linear execution
-- **Template Method**: Less flexible, requires inheritance
-- **Observer/Event-driven**: Overkill for synchronous sequential execution
+- **Database lock**: Would require database setup; overkill for CLI tool
+- **Network socket bind**: Complex to implement and port-dependent
+- **PID file checking**: Not cross-platform reliable
 
 ---
 
-### 8. Date Range Iteration Pattern
+### 7. Error Handling Strategy: Early Termination with Context Preservation
 
-**Decision**: Stream-based iteration with LocalDate
+**Decision**: Fail-fast approach with detailed error messages and context preservation.
 
 **Rationale**:
-- Java 8's java.time.LocalDate provides robust date arithmetic
-- Stream API enables functional iteration and potential parallelization in future
-- Clear, readable code for date range iteration
-- Handles leap years and month boundaries correctly
+- Matches user requirement: no automatic retry (clarification 2026-01-08)
+- Users are Production Support personnel; can investigate and restart manually
+- Context preservation enables post-mortem analysis
+- Clear error messages support troubleshooting (assumption in spec)
+- Prevents data corruption from partial completion
 
-**Implementation Pattern**:
-```java
-public static void processDateRange(LocalDate from, LocalDate to, 
-                                     ETLWorkflow workflow, Configuration config) {
-    if (from.isAfter(to)) {
-        throw new IllegalArgumentException("From date must be before or equal to to date");
-    }
-    
-    from.datesUntil(to.plusDays(1))
-         .forEach(date -> {
-             try {
-                 workflow.execute(date, config);
-             } catch (ETLException e) {
-                 throw new ETLException("Failed to process date: " + date, e);
-             }
-         });
-}
-```
+**Implementation Details**:
+- Validation failures stop before ETL execution starts (FR-002)
+- Subprocess failures stop the day's process immediately (FR-006)
+- Day failures stop entire multi-day process (FR-004 scenario 3)
+- Error messages include: subprocess name, date, error description, suggested action
+- Context state logged before termination for debugging
 
 **Alternatives Considered**:
-- **Traditional for loop**: More verbose, less functional
-- **Calendar-based iteration**: Deprecated API, error-prone
-- **Recursive approach**: Risk of stack overflow for large date ranges
+- **Retry mechanism**: Explicitly rejected by user clarification
+- **Continue on error**: Risks data corruption and inconsistent state
+- **Checkpoint/resume**: Out of scope per clarification; manual restart required
 
 ---
 
-### 9. Parameter Validation Pattern
+### 8. Date Processing: Java 8 java.time API
 
-**Decision**: Fluent validation chain with custom exceptions
+**Decision**: Use `java.time.LocalDate` for date representation and validation.
 
 **Rationale**:
-- Clear validation logic with descriptive error messages
-- Early validation fails fast before ETL execution
-- Custom exceptions provide granular error handling
-- Fluent API makes validation rules readable
+- Built into Java 8 (no additional dependencies)
+- Immutable, thread-safe date objects
+- Built-in validation for valid dates (leap years, month boundaries)
+- Easy format parsing with `DateTimeFormatter` (YYYYMMDD format)
+- Supports date arithmetic for iterating through date ranges
 
-**Implementation Pattern**:
-```java
-public class ParameterValidator {
-    public static void validateParameters(LocalDate from, LocalDate to, Path configPath) {
-        if (from == null || to == null) {
-            throw new ParameterValidationException("Date parameters are required");
-        }
-        
-        if (from.isAfter(to)) {
-            throw new ParameterValidationException(
-                "From date must be before or equal to to date");
-        }
-        
-        if (configPath == null) {
-            throw new ParameterValidationException("Configuration file path is required");
-        }
-        
-        if (!Files.exists(configPath)) {
-            throw new ParameterValidationException(
-                "Configuration file not found: " + configPath);
-        }
-        
-        if (!configPath.toString().toLowerCase().endsWith(".ini")) {
-            throw new ParameterValidationException(
-                "Configuration file must be in INI format (.ini extension)");
-        }
-    }
-}
-```
+**Implementation Details**:
+- Parse dates using `DateTimeFormatter.ofPattern("yyyyMMdd")`
+- Validate format and logical validity (from ≤ to)
+- Iterate using `date.plusDays(1)`
+- Format back to YYYYMMDD for logging and context storage
 
 **Alternatives Considered**:
-- **Bean Validation (JSR 303)**: Overkill for CLI parameter validation
-- **Apache Commons Validator**: Heavy dependency for simple validation rules
-- **Inline validation**: Less readable, harder to maintain
+- **java.util.Date/java.util.Calendar**: Deprecated, mutable, error-prone
+- **Joda-Time**: Was standard before Java 8; now obsolete with java.time
+- **String manipulation**: Error-prone, doesn't validate date validity
 
 ---
 
-## Summary
+## Architectural Patterns
+
+### 1. Orchestrator Pattern for Daily ETL Workflow
+
+**Pattern**: Orchestrator Pattern with sequential subprocess execution.
+
+**Rationale**:
+- Clearly separates workflow logic from subprocess implementation
+- Enforces strict sequence requirement (FR-005, FR-006)
+- Easy to add monitoring and logging at orchestration level
+- Testable in isolation (can mock subprocesses)
+- Supports future extensibility (adding more subprocesses)
+
+**Components**:
+- `DailyETLWorkflow`: Orchestrates a single day's execution
+- `SubprocessExecutor`: Executes subprocesses in sequence with dependency checks
+- `WorkflowEngine`: Manages multi-day date range iteration
+
+---
+
+### 2. Context Pattern for Data Transfer
+
+**Pattern**: Context Object Pattern with thread-safe storage.
+
+**Rationale**:
+- Meets FR-027 requirement for context-based data transfer
+- Decouples subprocesses (no direct method calls)
+- Centralized state management for monitoring and debugging
+- Type-safe access through wrapper methods
+- Supports both read and write operations per subprocess requirements
+
+**Data Flow**:
+1. Extract writes extracted data count → Context
+2. Transform reads extracted data, writes transformed data count → Context
+3. Load reads transformed data, writes loaded data count → Context
+4. Validate reads loaded data, writes validation results → Context
+5. Clean reads validation results, performs cleanup → Context
+
+---
+
+## Dependencies Summary
+
+**Runtime Dependencies**:
+- `org.apache.commons:commons-cli:1.4` - CLI argument parsing
+- `org.apache.commons:commons-configuration2:2.8.0` - INI configuration parsing
+- `commons-beanutils:commons-beanutils:1.9.4` - Required by Commons Configuration
+- `org.slf4j:slf4j-api:1.7.36` - Logging facade
+- `ch.qos.logback:logback-classic:1.2.11` - Logging implementation
+- `ch.qos.logback:logback-core:1.2.11` - Logback core
+
+**Test Dependencies**:
+- `junit:junit:4.13.2` - Unit testing framework
+- `org.mockito:mockito-core:4.5.1` - Mocking framework
+
+**All dependencies are Java 8 compatible.**
+
+## Conclusion
 
 All technology choices align with:
-- Java 8 platform requirement (Constitution Principle 1)
-- Maven build tool usage (Constitution Principle 2)
-- CLI interface exclusivity (Constitution Principle 3)
-- INI configuration format (Constitution Principle 4)
-- Component boundary clarity (Constitution Principle 5)
-- Third-party library usage (Constitution Principle 8)
+- Project Constitution requirements (Java 8, Maven, CLI-only, INI config)
+- Feature specification requirements (FR-001 through FR-031)
+- User clarifications (session 2026-01-08)
+- Best practices for Java ETL CLI tools
 
-No NEEDS CLARIFICATION items remain. All technical decisions have been researched and documented.
-
-## Next Steps
-
-Proceed to Phase 1: Design & Contracts
-1. Generate data-model.md from research decisions
-2. Generate API contracts in /contracts/ directory
-3. Generate quickstart.md for development setup
-4. Update agent context
-5. Re-evaluate Constitution Check post-design
+No further research required. Proceeding to Phase 1: Design & Contracts.

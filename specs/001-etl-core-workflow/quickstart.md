@@ -1,27 +1,22 @@
-# Quickstart Guide: ETL Core Workflow
+# Quick Start Guide: ETL Core Workflow
 
-**Feature**: ETL Core Workflow  
-**Date**: January 8, 2026  
-**Purpose**: Quickstart guide for developers implementing the ETL core workflow
+**Feature Branch**: `001-etl-core-workflow`
+**Date**: 2026-01-08
+**Status**: Phase 1 Design
 
 ## Overview
 
-This guide provides step-by-step instructions for setting up and developing the ETL core workflow feature.
+This guide provides a quick start for implementing and testing the ETL Core Workflow feature. It covers building the project, running tests, and executing the CLI tool.
+
+---
 
 ## Prerequisites
 
-### Required Software
-
 - **Java 8** (JDK 1.8.0_xxx)
-- **Maven 3.6+** (with Maven wrapper included)
+- **Maven 3.6+** (or Maven wrapper included in project)
 - **Git** (for version control)
-- **IDE**: IntelliJ IDEA or Eclipse (recommended)
 
-### System Requirements
-
-- Java 8 compatible JVM
-- At least 2GB RAM available for development
-- 1GB free disk space
+---
 
 ## Project Setup
 
@@ -30,879 +25,563 @@ This guide provides step-by-step instructions for setting up and developing the 
 ```bash
 git clone <repository-url>
 cd sdd-etl-tool
-```
-
-### 2. Switch to Feature Branch
-
-```bash
 git checkout 001-etl-core-workflow
 ```
 
-### 3. Build Project
+---
+
+### 2. Build Project
+
+Using Maven wrapper:
 
 ```bash
-# Using Maven wrapper
-./mvnw clean install
+# Windows
+mvnw.cmd clean install
 
-# Or using system Maven
+# Linux/Mac
+./mvnw clean install
+```
+
+Or using system Maven:
+
+```bash
 mvn clean install
 ```
 
-Expected output:
+**Expected Output**:
 ```
 [INFO] BUILD SUCCESS
 [INFO] Total time: XX s
 ```
 
+---
+
+### 3. Verify Build
+
+```bash
+# Check that JAR was created
+ls target/etl-tool-1.0.0.jar
+```
+
+---
+
 ## Project Structure
 
 ```
-src/
-├── main/
-│   ├── java/
-│   │   └── com/sdd/etl/
-│   │       ├── cli/                   # CLI interface implementation
-│   │       ├── context/                # Context implementation
-│   │       ├── workflow/               # Daily ETL workflow implementation
-│   │       ├── api/                    # API definitions only
-│   │       ├── logging/                # Logging implementation
-│   │       └── exception/              # Exception definitions
-│   └── resources/
-│       └── logback.xml
-└── test/
-    └── java/
-        └── com/sdd/etl/
-            ├── cli/
-            ├── context/
-            ├── workflow/
-            ├── logging/
-            └── integration/
+sdd-etl-tool/
+├── src/
+│   ├── main/java/com/sdd/etl/
+│   │   ├── cli/
+│   │   │   ├── ETLCommandLine.java          # CLI entry point
+│   │   │   └── CommandLineValidator.java    # Input validation
+│   │   ├── context/
+│   │   │   ├── ETLContext.java              # Context implementation
+│   │   │   ├── ContextManager.java          # Context lifecycle
+│   │   │   └── ContextConstants.java        # Context keys
+│   │   ├── workflow/
+│   │   │   ├── DailyETLWorkflow.java       # Daily orchestration
+│   │   │   ├── SubprocessExecutor.java      # Subprocess sequencing
+│   │   │   └── WorkflowEngine.java          # Multi-day coordinator
+│   │   ├── subprocess/
+│   │   │   ├── ExtractSubprocess.java       # API only (no impl)
+│   │   │   ├── TransformSubprocess.java     # API only (no impl)
+│   │   │   ├── LoadSubprocess.java          # API only (no impl)
+│   │   │   ├── ValidateSubprocess.java      # API only (no impl)
+│   │   │   └── CleanSubprocess.java         # API only (no impl)
+│   │   ├── model/
+│   │   │   ├── SourceDataModel.java         # API only (no impl)
+│   │   │   └── TargetDataModel.java         # API only (no impl)
+│   │   ├── config/
+│   │   │   ├── ConfigurationLoader.java     # INI loader
+│   │   │   └── ETConfiguration.java        # Config POJO
+│   │   └── logging/
+│   │       ├── ETLogger.java                # Logging facade
+│   │       └── StatusLogger.java            # Status logging
+│   ├── main/resources/
+│   │   └── logback.xml                     # Logging config
+│   └── test/java/com/sdd/etl/              # Unit tests
+│       ├── cli/
+│       ├── context/
+│       ├── workflow/
+│       └── config/
+├── specs/001-etl-core-workflow/             # Feature specs
+│   ├── plan.md
+│   ├── research.md
+│   ├── data-model.md
+│   ├── quickstart.md
+│   └── contracts/
+│       ├── cli-api.md
+│       ├── context-api.md
+│       ├── workflow-api.md
+│       ├── subprocess-api.md
+│       └── datamodel-api.md
+├── pom.xml                                 # Maven configuration
+├── README.md                               # Project documentation
+└── .etlconfig.ini.example                 # Example config
 ```
 
-## Development Workflow
+---
 
-### Step 1: Add Dependencies
+## Running Tests
 
-Update `pom.xml` with required dependencies:
-
-```xml
-<dependencies>
-    <!-- Apache Commons CLI -->
-    <dependency>
-        <groupId>commons-cli</groupId>
-        <artifactId>commons-cli</artifactId>
-        <version>1.4</version>
-    </dependency>
-    
-    <!-- ini4j for INI file parsing -->
-    <dependency>
-        <groupId>org.ini4j</groupId>
-        <artifactId>ini4j</artifactId>
-        <version>0.5.4</version>
-    </dependency>
-    
-    <!-- SLF4J + Logback -->
-    <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>1.7.36</version>
-    </dependency>
-    <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-classic</artifactId>
-        <version>1.2.12</version>
-    </dependency>
-    
-    <!-- JUnit 4 -->
-    <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>4.13.2</version>
-        <scope>test</scope>
-    </dependency>
-    
-    <!-- Mockito -->
-    <dependency>
-        <groupId>org.mockito</groupId>
-        <artifactId>mockito-core</artifactId>
-        <version>3.12.4</version>
-        <scope>test</scope>
-    </dependency>
-</dependencies>
-```
-
-Run:
-```bash
-./mvnw dependency:resolve
-```
-
-### Step 2: Create Configuration Logging
-
-Create `src/main/resources/logback.xml`:
-
-```xml
-<configuration>
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-        </encoder>
-    </appender>
-    
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/etl-tool.log</file>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>logs/etl-tool.%d{yyyy-MM-dd}.log</fileNamePattern>
-            <maxHistory>30</maxHistory>
-        </rollingPolicy>
-        <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-        </encoder>
-    </appender>
-    
-    <root level="INFO">
-        <appender-ref ref="CONSOLE" />
-        <appender-ref ref="FILE" />
-    </root>
-</configuration>
-```
-
-### Step 3: Implement Exception Classes
-
-Create base exception class:
-
-```java
-// src/main/java/com/sdd/etl/exception/ETLException.java
-package com.sdd.etl.exception;
-
-public class ETLException extends Exception {
-    public ETLException(String message) {
-        super(message);
-    }
-    
-    public ETLException(String message, Throwable cause) {
-        super(message, cause);
-    }
-}
-```
-
-Create specialized exceptions:
-
-```java
-// src/main/java/com/sdd/etl/exception/ParameterValidationException.java
-package com.sdd.etl.exception;
-
-public class ParameterValidationException extends ETLException {
-    public ParameterValidationException(String message) {
-        super(message);
-    }
-}
-```
-
-```java
-// src/main/java/com/sdd/etl/exception/ConfigurationException.java
-package com.sdd.etl.exception;
-
-public class ConfigurationException extends ETLException {
-    public ConfigurationException(String message) {
-        super(message);
-    }
-}
-```
-
-```java
-// src/main/java/com/sdd/etl/exception/SubprocessException.java
-package com.sdd.etl.exception;
-
-public class SubprocessException extends ETLException {
-    public SubprocessException(String message) {
-        super(message);
-    }
-    
-    public SubprocessException(String message, Throwable cause) {
-        super(message, cause);
-    }
-}
-```
-
-```java
-// src/main/java/com/sdd/etl/exception/ConcurrentExecutionException.java
-package com.sdd.etl.exception;
-
-public class ConcurrentExecutionException extends ETLException {
-    public ConcurrentExecutionException(String message) {
-        super(message);
-    }
-}
-```
-
-### Step 4: Implement Enums
-
-```java
-// src/main/java/com/sdd/etl/enums/SubprocessType.java
-package com.sdd.etl.enums;
-
-public enum SubprocessType {
-    NOT_STARTED,
-    EXTRACT,
-    TRANSFORM,
-    LOAD,
-    VALIDATE,
-    CLEAN,
-    COMPLETED,
-    FAILED
-}
-```
-
-### Step 5: Implement API Definitions (Phase 1 Only)
-
-These are interface definitions - no implementations required.
-
-Create subprocess interfaces in `src/main/java/com/sdd/etl/api/subprocess/`:
-
-- `Subprocess.java` (base interface)
-- `ExtractProcess.java`
-- `TransformProcess.java`
-- `LoadProcess.java`
-- `ValidateProcess.java`
-- `CleanProcess.java`
-
-Create model interfaces in `src/main/java/com/sdd/etl/api/model/`:
-
-- `SourceDataModel.java`
-- `TargetDataModel.java`
-
-Create workflow interface in `src/main/java/com/sdd/etl/api/workflow/`:
-
-- `ETLDailyProcess.java`
-
-Refer to contracts in `specs/001-etl-core-workflow/contracts/` for detailed API specifications.
-
-### Step 6: Implement Data Models (Phase 1 Only)
-
-Create configuration classes in `src/main/java/com/sdd/etl/config/`:
-
-- `Configuration.java`
-- `SourceConfig.java`
-- `TargetConfig.java`
-- `Credentials.java`
-- `TransformConfig.java`
-- `FilterConfig.java`
-- `ValidationConfig.java`
-- `LoggingConfig.java`
-
-Refer to `specs/001-etl-core-workflow/data-model.md` for detailed specifications.
-
-### Step 7: Implement Context (Phase 1 - Concrete Implementation)
-
-Create `DailyProcessContext.java` in `src/main/java/com/sdd/etl/context/`:
-
-- Use immutable design with Builder pattern
-- Implement all getters
-- Implement builder with fluent API
-- Implement validation logic
-- Implement utility methods (withSubprocess, withRecordsExtracted, etc.)
-
-Refer to `specs/001-etl-core-workflow/contracts/context-api.md` for detailed specification.
-
-### Step 8: Implement INI Configuration Parser
-
-Create `INIConfigurationParser.java` in `src/main/java/com/sdd/etl/cli/parser/`:
-
-```java
-package com.sdd.etl.cli.parser;
-
-import com.sdd.etl.config.Configuration;
-import com.sdd.etl.exception.ConfigurationException;
-import org.ini4j.Ini;
-
-import java.nio.file.Path;
-
-public class INIConfigurationParser {
-    
-    public Configuration parse(Path configPath) throws ConfigurationException {
-        try {
-            Ini ini = new Ini(configPath.toFile());
-            
-            // Parse sources section
-            List<SourceConfig> sources = parseSources(ini);
-            
-            // Parse targets section
-            List<TargetConfig> targets = parseTargets(ini);
-            
-            // Parse transforms section
-            List<TransformConfig> transforms = parseTransforms(ini, sources, targets);
-            
-            // Parse validation section
-            ValidationConfig validation = parseValidation(ini);
-            
-            // Parse logging section
-            LoggingConfig logging = parseLogging(ini);
-            
-            return new Configuration(sources, targets, transforms, validation, logging);
-            
-        } catch (Exception e) {
-            throw new ConfigurationException("Failed to parse configuration: " + e.getMessage(), e);
-        }
-    }
-    
-    private List<SourceConfig> parseSources(Ini ini) {
-        // Implementation
-    }
-    
-    private List<TargetConfig> parseTargets(Ini ini) {
-        // Implementation
-    }
-    
-    // Other parsing methods...
-}
-```
-
-### Step 9: Implement CLI Components
-
-Create CLI components in `src/main/java/com/sdd/etl/cli/command/`:
-
-#### ParameterValidator.java
-
-```java
-package com.sdd.etl.cli.command;
-
-import com.sdd.etl.exception.ParameterValidationException;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-
-public class ParameterValidator {
-    
-    private static final DateTimeFormatter DATE_FORMATTER = 
-        DateTimeFormatter.ofPattern("yyyyMMdd");
-    
-    public static void validateParameters(LocalDate fromDate, LocalDate toDate, Path configPath) 
-            throws ParameterValidationException {
-        
-        if (fromDate == null || toDate == null) {
-            throw new ParameterValidationException("Date parameters are required");
-        }
-        
-        if (fromDate.isAfter(toDate)) {
-            throw new ParameterValidationException(
-                String.format("From date must be before or equal to to date (%s > %s)", 
-                            fromDate, toDate));
-        }
-        
-        if (configPath == null) {
-            throw new ParameterValidationException("Configuration file path is required");
-        }
-        
-        if (!Files.exists(configPath)) {
-            throw new ParameterValidationException(
-                "Configuration file not found: " + configPath);
-        }
-        
-        if (!configPath.toString().toLowerCase().endsWith(".ini")) {
-            throw new ParameterValidationException(
-                "Configuration file must be in INI format (.ini extension)");
-        }
-    }
-    
-    public static LocalDate parseDate(String dateStr) throws ParameterValidationException {
-        try {
-            return LocalDate.parse(dateStr, DATE_FORMATTER);
-        } catch (DateTimeParseException e) {
-            throw new ParameterValidationException(
-                "Invalid date format: " + dateStr + " (expected YYYYMMDD)");
-        }
-    }
-}
-```
-
-#### ETLCliCommand.java
-
-```java
-package com.sdd.etl.cli.command;
-
-import com.sdd.etl.context.DailyProcessContext;
-import com.sdd.etl.exception.*;
-import org.apache.commons.cli.*;
-
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDate;
-
-public class ETLCliCommand {
-    
-    public int execute(String[] args) {
-        Options options = createOptions();
-        CommandLineParser parser = new DefaultParser();
-        
-        try {
-            CommandLine cmd = parser.parse(options, args);
-            
-            // Handle help
-            if (cmd.hasOption("help")) {
-                displayHelp();
-                return 0;
-            }
-            
-            // Handle version
-            if (cmd.hasOption("version")) {
-                displayVersion();
-                return 0;
-            }
-            
-            // Parse required parameters
-            LocalDate fromDate = ParameterValidator.parseDate(cmd.getOptionValue("from"));
-            LocalDate toDate = ParameterValidator.parseDate(cmd.getOptionValue("to"));
-            Path configPath = Paths.get(cmd.getOptionValue("config"));
-            
-            // Validate parameters
-            ParameterValidator.validateParameters(fromDate, toDate, configPath);
-            
-            // TODO: Load configuration
-            // TODO: Detect concurrent execution
-            // TODO: Execute ETL process
-            
-            return 0;
-            
-        } catch (ParameterValidationException e) {
-            System.err.println("Error: " + e.getMessage());
-            displayUsage();
-            return 1;
-        } catch (ParseException e) {
-            System.err.println("Error: Failed to parse command line arguments");
-            displayUsage();
-            return 1;
-        } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
-            return 2;
-        }
-    }
-    
-    private Options createOptions() {
-        Options options = new Options();
-        
-        options.addOption(Option.builder("from")
-            .hasArg()
-            .required()
-            .desc("Inclusive start date in YYYYMMDD format")
-            .build());
-        
-        options.addOption(Option.builder("to")
-            .hasArg()
-            .required()
-            .desc("Inclusive end date in YYYYMMDD format")
-            .build());
-        
-        options.addOption(Option.builder("config")
-            .hasArg()
-            .required()
-            .desc("Path to INI configuration file")
-            .build());
-        
-        options.addOption(Option.builder("help")
-            .desc("Display this help message and exit")
-            .build());
-        
-        options.addOption(Option.builder("version")
-            .desc("Display version information and exit")
-            .build());
-        
-        return options;
-    }
-    
-    private void displayHelp() {
-        System.out.println("ETL Tool - Extract, Transform, Load Data Pipeline\n");
-        System.out.println("Usage:");
-        System.out.println("  etl --from YYYYMMDD --to YYYYMMDD --config <path> [options]\n");
-        System.out.println("Required Parameters:");
-        System.out.println("  --from <date>    Inclusive start date in YYYYMMDD format");
-        System.out.println("  --to <date>      Inclusive end date in YYYYMMDD format");
-        System.out.println("  --config <path>  Path to INI configuration file\n");
-        System.out.println("Optional Parameters:");
-        System.out.println("  --help           Display this help message and exit");
-        System.out.println("  --version        Display version information and exit");
-    }
-    
-    private void displayVersion() {
-        System.out.println("ETL Tool version 1.0.0");
-    }
-    
-    private void displayUsage() {
-        System.out.println("\nUsage: etl --from <date> --to <date> --config <path>");
-        System.out.println("  etl --help for more information\n");
-    }
-}
-```
-
-#### HelpCommand.java
-
-```java
-package com.sdd.etl.cli.command;
-
-public class HelpCommand {
-    
-    public void display() {
-        System.out.println("ETL Tool - Extract, Transform, Load Data Pipeline\n");
-        System.out.println("Usage:");
-        System.out.println("  etl --from YYYYMMDD --to YYYYMMDD --config <path> [options]\n");
-        System.out.println("Required Parameters:");
-        System.out.println("  --from <date>    Inclusive start date in YYYYMMDD format (e.g., 20250101)");
-        System.out.println("  --to <date>      Inclusive end date in YYYYMMDD format (e.g., 20250131)");
-        System.out.println("  --config <path>  Path to INI configuration file\n");
-        System.out.println("Optional Parameters:");
-        System.out.println("  --help           Display this help message and exit");
-        System.out.println("  --version        Display version information and exit\n");
-        System.out.println("Examples:");
-        System.out.println("  etl --from 20250101 --to 20250131 --config config.ini");
-        System.out.println("  etl --from 20250201 --to 20250201 --config /path/to/config.ini\n");
-        System.out.println("For more information, visit: https://github.com/example/sdd-etl-tool");
-    }
-}
-```
-
-### Step 10: Implement Logging Components
-
-Create logging components in `src/main/java/com/sdd/etl/logging/`:
-
-#### ProcessStatusLogger.java
-
-```java
-package com.sdd.etl.logging;
-
-import com.sdd.etl.context.DailyProcessContext;
-import com.sdd.etl.enums.SubprocessType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-
-public class ProcessStatusLogger {
-    
-    private static final Logger logger = LoggerFactory.getLogger(ProcessStatusLogger.class);
-    private static final DateTimeFormatter DATE_FORMATTER = 
-        DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    
-    public void logProcessStart(LocalDate date) {
-        logger.info("=== ETL Process Started for Date: {} ===", 
-                   date.format(DATE_FORMATTER));
-    }
-    
-    public void logProcessComplete(LocalDate date, DailyProcessContext context) {
-        logger.info("=== ETL Process Completed for Date: {} ===", 
-                   date.format(DATE_FORMATTER));
-        logger.info("Records: Extracted={}, Transformed={}, Loaded={}", 
-                   context.getRecordsExtracted(),
-                   context.getRecordsTransformed(),
-                   context.getRecordsLoaded());
-    }
-    
-    public void logProcessFailed(LocalDate date, DailyProcessContext context, Exception e) {
-        logger.error("=== ETL Process Failed for Date: {} ===", 
-                    date.format(DATE_FORMATTER), e);
-    }
-    
-    public void logSubprocessStart(DailyProcessContext context, SubprocessType type) {
-        logger.info("Subprocess Started: {} [Extracted={}, Transformed={}, Loaded={}]",
-                   type,
-                   context.getRecordsExtracted(),
-                   context.getRecordsTransformed(),
-                   context.getRecordsLoaded());
-    }
-    
-    public void logSubprocessComplete(DailyProcessContext context, SubprocessType type) {
-        logger.info("Subprocess Completed: {} [Extracted={}, Transformed={}, Loaded={}]",
-                   type,
-                   context.getRecordsExtracted(),
-                   context.getRecordsTransformed(),
-                   context.getRecordsLoaded());
-    }
-}
-```
-
-#### ConcurrentExecutionDetector.java
-
-```java
-package com.sdd.etl.logging;
-
-import com.sdd.etl.exception.ConcurrentExecutionException;
-
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-
-public class ConcurrentExecutionDetector {
-    
-    private static final Path LOCK_FILE_PATH = 
-        Paths.get(System.getProperty("java.io.tmpdir"), "etl-tool.lock");
-    
-    public void detectAndPreventConcurrentExecution() throws ConcurrentExecutionException {
-        try {
-            // Try to acquire exclusive lock on lock file
-            FileChannel channel = FileChannel.open(LOCK_FILE_PATH, 
-                StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-            FileLock lock = channel.tryLock();
-            
-            if (lock == null) {
-                throw new ConcurrentExecutionException(
-                    "Another ETL process is already running. " +
-                    "Only one ETL process can run at a time.");
-            }
-            
-            // Lock acquired successfully - detector will release lock later
-            
-        } catch (ConcurrentExecutionException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ConcurrentExecutionException(
-                "Failed to detect concurrent execution: " + e.getMessage(), e);
-        }
-    }
-    
-    public AutoCloseable acquireExecutionLock() throws ConcurrentExecutionException {
-        try {
-            FileChannel channel = FileChannel.open(LOCK_FILE_PATH, 
-                StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-            FileLock lock = channel.tryLock();
-            
-            if (lock == null) {
-                throw new ConcurrentExecutionException(
-                    "Another ETL process is already running.");
-            }
-            
-            return new LockReleaser(channel, lock);
-            
-        } catch (ConcurrentExecutionException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ConcurrentExecutionException(
-                "Failed to acquire execution lock: " + e.getMessage(), e);
-        }
-    }
-    
-    private static class LockReleaser implements AutoCloseable {
-        private final FileChannel channel;
-        private final FileLock lock;
-        
-        LockReleaser(FileChannel channel, FileLock lock) {
-            this.channel = channel;
-            this.lock = lock;
-        }
-        
-        @Override
-        public void close() throws Exception {
-            if (lock != null && lock.isValid()) {
-                lock.release();
-            }
-            if (channel != null && channel.isOpen()) {
-                channel.close();
-            }
-        }
-    }
-}
-```
-
-### Step 11: Implement Workflow Components (Phase 1 - Concrete Implementation)
-
-Create workflow components in `src/main/java/com/sdd/etl/workflow/`:
-
-- `DailyETLWorkflow.java` (concrete implementation)
-- `ProcessExecutionOrchestrator.java` (concrete implementation)
-
-Refer to `specs/001-etl-core-workflow/contracts/workflow-api.md` for detailed specifications.
-
-### Step 12: Create Main Entry Point
-
-Create `src/main/java/com/sdd/etl/Main.java`:
-
-```java
-package com.sdd.etl;
-
-import com.sdd.etl.cli.command.ETLCliCommand;
-
-public class Main {
-    
-    public static void main(String[] args) {
-        ETLCliCommand command = new ETLCliCommand();
-        int exitCode = command.execute(args);
-        System.exit(exitCode);
-    }
-}
-```
-
-## Testing
-
-### Run Unit Tests
+### Run All Tests
 
 ```bash
-./mvnw test
+mvn test
 ```
 
-### Run Specific Test
+### Run Specific Test Class
 
 ```bash
-./mvnw test -Dtest=DailyProcessContextTest
+mvn test -Dtest=ETLCommandLineTest
 ```
 
-### Generate Test Coverage Report
+### Run Specific Test Method
 
 ```bash
-./mvnw clean test jacoco:report
+mvn test -Dtest=ETLCommandLineTest#testValidateArguments
 ```
 
-View report at: `target/site/jacoco/index.html`
-
-**Note**: Test coverage must be >60% (per constitution requirement).
-
-## Running the Tool
-
-### Build the Tool
+### View Test Coverage Report
 
 ```bash
-./mvnw clean package
+mvn clean test jacoco:report
+# Open target/site/jacoco/index.html in browser
 ```
 
-### Run with Help
+**Expected Coverage**: >60% (per constitution requirement)
 
-```bash
-java -jar target/sdd-etl-tool-1.0.0.jar --help
-```
+---
 
-### Run with Sample Configuration
+## Running the ETL Tool
 
-```bash
-java -jar target/sdd-etl-tool-1.0.0.jar \
-  --from 20250101 \
-  --to 20250131 \
-  --config config/etl-config.ini
-```
+### 1. Create Configuration File
 
-## Sample Configuration File
-
-Create `config/etl-config.ini`:
+Create a file named `.etlconfig.ini` (copy from `.etlconfig.ini.example`):
 
 ```ini
 [sources]
-count=1
+# Data source configurations
+count=2
 
-[source.0]
-name=source_database
+[source1]
+name=database_source
 type=database
-connectionString=jdbc:postgresql://localhost:5432/sourcedb
-credentials.username=etl_user
-credentials.password=secure_password
+connectionString=jdbc:mysql://localhost:3306/etl_db?user=root&password=secret
 primaryKeyField=id
+extractQuery=SELECT * FROM customers WHERE date = '{date}'
+
+[source2]
+name=api_source
+type=api
+connectionString=https://api.example.com/data?date={date}
+primaryKeyField=customer_id
 
 [targets]
-count=1
+# Data target configurations
+count=2
 
-[target.0]
-name=target_warehouse
+[target1]
+name=database_target
 type=database
-connectionString=jdbc:mysql://localhost:3306/warehouse
-credentials.username=etl_user
-credentials.password=secure_password
+connectionString=jdbc:postgresql://localhost:5432/etl_db?user=etl&password=secret
+batchSize=1000
 
-[transforms]
+[target2]
+name=api_target
+type=api
+connectionString=https://target-api.example.com/load
+batchSize=500
+
+[transformations]
+# Transformation rules
 count=1
 
-[transform.0]
-sourceName=source_database
-targetName=target_warehouse
-
-[transform.0.fieldMapping]
-id=id
-name=name
-timestamp=timestamp
+[transformation1]
+name=map_fields
+sourceField=customer_name
+targetField=name
+transformType=map
 
 [validation]
-checkCompleteness=true
-checkQuality=true
-checkConsistency=true
-completenessRules=id,name,timestamp
+# Validation rules
+count=2
+
+[rule1]
+name=not_null
+field=id
+ruleType=not_null
+
+[rule2]
+name=email_format
+field=email
+ruleType=pattern
+ruleValue=^[^@]+@[^@]+$
 
 [logging]
-logDirectory=./logs
-consoleLogging=true
-fileLogging=true
+logFilePath=./etl.log
 logLevel=INFO
 ```
 
-## Development Tips
+---
 
-### TDD Approach
+### 2. Execute ETL Process
 
-1. Write failing test first
-2. Implement minimal code to pass test
-3. Refactor
-4. Repeat
-
-### Code Style
-
-- Follow Java naming conventions
-- Use meaningful variable and method names
-- Add Javadoc comments for public APIs
-- Keep methods short and focused
-
-### Debugging
-
-- Use IDE debugger for stepping through code
-- Enable DEBUG logging level in `logback.xml`
-- Check logs in `logs/etl-tool.log`
-
-## Common Issues
-
-### Issue: "Unsupported class file version"
-
-**Solution**: Ensure you're using Java 8 (JDK 1.8)
+#### Single-Day Execution
 
 ```bash
-java -version
+java -jar target/etl-tool-1.0.0.jar --from 20250101 --to 20250101 --config .etlconfig.ini
 ```
 
-### Issue: "Failed to parse configuration"
+**Expected Output**:
+```
+ETL Tool v1.0.0
+Starting ETL process...
+  From: 20250101
+  To:  20250101
+  Config: .etlconfig.ini
 
-**Solution**: Check that:
-- Configuration file exists
-- File has `.ini` extension
-- File is readable
-- INI format is correct
+Processing date: 20250101
+  [EXTRACT]   Success (1000 records)
+  [TRANSFORM] Success (1000 records)
+  [LOAD]      Success (1000 records to 2 targets)
+  [VALIDATE]  Success (all rules passed)
+  [CLEAN]     Success
+  Result: Success
 
-### Issue: "Another ETL process is already running"
+ETL Process Completed
+  Total Days: 1
+  Successful: 1
+  Failed: 0
+  Duration: 00:00:05
+```
 
-**Solution**: 
-- Check if another ETL process is running
-- If not, delete lock file manually: `rm /tmp/etl-tool.lock`
+#### Multi-Day Execution
+
+```bash
+java -jar target/etl-tool-1.0.0.jar --from 20250101 --to 20250107 --config .etlconfig.ini
+```
+
+**Expected Output**:
+```
+ETL Tool v1.0.0
+Starting ETL process...
+  From: 20250101
+  To:  20250107
+  Config: .etlconfig.ini
+
+Processing date: 20250101
+  [EXTRACT]   Success (1000 records)
+  [TRANSFORM] Success (1000 records)
+  [LOAD]      Success (1000 records to 2 targets)
+  [VALIDATE]  Success (all rules passed)
+  [CLEAN]     Success
+  Result: Success
+
+Processing date: 20250102
+  [EXTRACT]   Success (1050 records)
+  [TRANSFORM] Success (1050 records)
+  [LOAD]      Success (1050 records to 2 targets)
+  [VALIDATE]  Success (all rules passed)
+  [CLEAN]     Success
+  Result: Success
+
+... (days 20250103 through 20250107) ...
+
+ETL Process Completed
+  Total Days: 7
+  Successful: 7
+  Failed: 0
+  Duration: 00:05:23
+```
+
+---
+
+### 3. View Help
+
+```bash
+java -jar target/etl-tool-1.0.0.jar --help
+```
+
+**Expected Output**:
+```
+ETL Tool - Extract, Transform, Load data across multiple dates
+
+Usage:
+  java -jar etl-tool-1.0.0.jar --from <YYYYMMDD> --to <YYYYMMDD> --config <path>
+
+Required Parameters:
+  --from <YYYYMMDD>    Inclusive start date (format: YYYYMMDD)
+  --to <YYYYMMDD>      Inclusive end date (format: YYYYMMDD)
+  --config <path>      Absolute path to INI configuration file
+
+Optional Parameters:
+  --help               Display this help message
+
+Examples:
+  java -jar etl-tool-1.0.0.jar --from 20250101 --to 20250107 --config /path/to/config.ini
+  java -jar etl-tool-1.0.0.jar --help
+
+Exit Codes:
+  0 - Success
+  1 - Input validation error
+  2 - Concurrent execution detected
+  3 - ETL process error
+  4 - Configuration error
+  5 - Unexpected error
+```
+
+---
+
+## Error Scenarios
+
+### 1. Invalid Date Format
+
+```bash
+java -jar target/etl-tool-1.0.0.jar --from 2025-01-01 --to 20250107 --config .etlconfig.ini
+```
+
+**Expected Output**:
+```
+Error: Invalid date format for --from/--to parameter.
+Expected format: YYYYMMDD (e.g., 20250101)
+Provided value: 2025-01-01
+```
+
+**Exit Code**: 1
+
+---
+
+### 2. Invalid Date Range
+
+```bash
+java -jar target/etl-tool-1.0.0.jar --from 20250107 --to 20250101 --config .etlconfig.ini
+```
+
+**Expected Output**:
+```
+Error: Invalid date range.
+From date (20250107) must be before or equal to To date (20250101).
+```
+
+**Exit Code**: 1
+
+---
+
+### 3. Missing Configuration File
+
+```bash
+java -jar target/etl-tool-1.0.0.jar --from 20250101 --to 20250107 --config /nonexistent/config.ini
+```
+
+**Expected Output**:
+```
+Error: Configuration file not found or not readable.
+Path: /nonexistent/config.ini
+```
+
+**Exit Code**: 1
+
+---
+
+### 4. Concurrent Execution Detection
+
+```bash
+# Terminal 1
+java -jar target/etl-tool-1.0.0.jar --from 20250101 --to 20250107 --config .etlconfig.ini
+
+# Terminal 2 (while Terminal 1 is still running)
+java -jar target/etl-tool-1.0.0.jar --from 20250108 --to 20250114 --config .etlconfig.ini
+```
+
+**Expected Output (Terminal 2)**:
+```
+Error: Another ETL process is already running.
+Please wait for it to complete before starting a new process.
+Lock file: <path>/.etl.lock
+```
+
+**Exit Code**: 2
+
+---
+
+### 5. ETL Process Failure
+
+```bash
+# Configuration has unreachable source
+java -jar target/etl-tool-1.0.0.jar --from 20250101 --to 20250107 --config .etlconfig.ini
+```
+
+**Expected Output**:
+```
+Processing date: 20250101
+  [EXTRACT]   Failed: Connection timeout
+  Result: Failed
+Error: Day 20250101 failed during Extract subprocess.
+Details: Unable to connect to source: database_source
+
+Suggested Action: Check network connectivity and source credentials.
+Process stopped. No further dates processed.
+```
+
+**Exit Code**: 3
+
+---
+
+## Log Files
+
+### Console Log
+
+All status messages are printed to console in real-time.
+
+### File Log
+
+Detailed logs are written to the file specified in configuration (default: `./etl.log`).
+
+**Example Log Content**:
+```
+2025-01-08 10:00:00.000 INFO  ETLCommandLine - ETL Tool v1.0.0 starting
+2025-01-08 10:00:00.100 INFO  ETLCommandLine - From: 20250101, To: 20250107, Config: .etlconfig.ini
+2025-01-08 10:00:00.200 INFO  WorkflowEngine - Processing 7 days
+2025-01-08 10:00:00.300 INFO  DailyETLWorkflow - Starting day: 20250101
+2025-01-08 10:00:01.000 INFO  StatusLogger - [20250101] EXTRACT Success (1000 records)
+2025-01-08 10:00:02.000 INFO  StatusLogger - [20250101] TRANSFORM Success (1000 records)
+2025-01-08 10:00:03.000 INFO  StatusLogger - [20250101] LOAD Success (1000 records to 2 targets)
+2025-01-08 10:00:04.000 INFO  StatusLogger - [20250101] VALIDATE Success (all rules passed)
+2025-01-08 10:00:04.500 INFO  StatusLogger - [20250101] CLEAN Success
+...
+2025-01-08 10:05:23.000 INFO  WorkflowEngine - All days processed: 7 successful, 0 failed
+2025-01-08 10:05:23.100 INFO  ETLCommandLine - ETL Process Completed in 00:05:23
+```
+
+---
+
+## Development Workflow
+
+### 1. Implement a Feature
+
+1. Read the feature specification: `specs/001-etl-core-workflow/spec.md`
+2. Read the implementation plan: `specs/001-etl-core-workflow/plan.md`
+3. Read the relevant API contracts in `specs/001-etl-core-workflow/contracts/`
+4. Implement the feature following TDD approach
+5. Write unit tests before writing implementation code
+6. Run tests to ensure they pass
+7. Run full build: `mvn clean install`
+
+---
+
+### 2. Debugging
+
+1. Enable DEBUG logging in `logback.xml`
+2. Run with verbose output: `java -jar etl-tool-1.0.0.jar --from 20250101 --to 20250101 --config .etlconfig.ini`
+3. Check log file: `etl.log`
+4. Use context snapshots for debugging (logged on error)
+
+---
+
+### 3. Manual Testing Checklist
+
+- [ ] CLI accepts valid parameters and starts ETL process
+- [ ] CLI rejects invalid date formats with clear error message
+- [ ] CLI rejects invalid date ranges (from > to)
+- [ ] CLI rejects missing configuration files with clear error message
+- [ ] Help command displays usage information
+- [ ] Multi-day execution processes days in sequence
+- [ ] Single-day execution completes successfully
+- [ ] Each subprocess executes in strict sequence
+- [ ] Subprocess failure stops the day's process
+- [ ] Day failure stops multi-day execution
+- [ ] Concurrent execution is detected and rejected
+- [ ] Status logs appear on console and file
+- [ ] Context is created and passed to subprocesses
+- [ ] Data flows through context between subprocesses
+
+---
+
+## Scope Limitations (This Phase)
+
+**Concrete Implementations** (Required):
+- ✅ CLI interface (argument parsing, validation, entry point)
+- ✅ Context implementation (state management, data transfer)
+- ✅ Daily ETL Workflow (orchestration, sequencing)
+
+**API Definitions Only** (No Implementation):
+- ❌ ExtractSubprocess - API defined, no concrete implementation
+- ❌ TransformSubprocess - API defined, no concrete implementation
+- ❌ LoadSubprocess - API defined, no concrete implementation
+- ❌ ValidateSubprocess - API defined, no concrete implementation
+- ❌ CleanSubprocess - API defined, no concrete implementation
+- ❌ SourceDataModel - API defined, no concrete implementation
+- ❌ TargetDataModel - API defined, no concrete implementation
+
+**Note**: This phase focuses on establishing the framework (CLI, Context, Workflow). Subprocess and DataModel concrete implementations will be added in future phases.
+
+---
+
+## Troubleshooting
+
+### Build Fails with "Compilation Error"
+
+**Solution**: Ensure Java 8 is installed and configured:
+```bash
+java -version  # Should show 1.8.0_xxx
+mvn -version  # Should show Java 8
+```
+
+---
+
+### Tests Fail with "NoClassDefFoundError"
+
+**Solution**: Clean and rebuild:
+```bash
+mvn clean install
+```
+
+---
+
+### Concurrent Execution Lock Not Released
+
+**Solution**: Manually remove lock file:
+```bash
+rm .etl.lock  # Linux/Mac
+del .etl.lock  # Windows
+```
+
+---
+
+### Configuration File Not Found
+
+**Solution**: Use absolute path to configuration file:
+```bash
+java -jar target/etl-tool-1.0.0.jar --from 20250101 --to 20250107 --config C:\path\to\.etlconfig.ini
+```
+
+---
 
 ## Next Steps
 
-After completing Phase 1 implementation:
+1. **Implement Subprocesses**: Concrete implementations for Extract, Transform, Load, Validate, Clean
+2. **Implement Data Models**: Concrete implementations for Database, API, File sources and targets
+3. **Add More Features**: Retry mechanism, incremental updates, distributed processing
+4. **Performance Optimization**: Batch processing, parallel extraction, caching
 
-1. Run all tests: `./mvnw test`
-2. Check test coverage: `./mvnw jacoco:report`
-3. Verify coverage >60%
-4. Review implementation against contracts
-5. Run integration tests
-6. Commit changes
-
-## Resources
-
-- **Spec**: `specs/001-etl-core-workflow/spec.md`
-- **Plan**: `specs/001-etl-core-workflow/plan.md`
-- **Research**: `specs/001-etl-core-workflow/research.md`
-- **Data Model**: `specs/001-etl-core-workflow/data-model.md`
-- **Contracts**: `specs/001-etl-core-workflow/contracts/`
-- **Constitution**: `.specify/memory/constitution.md`
+---
 
 ## Support
 
 For issues or questions:
-1. Check the specification documents
-2. Review the plan and research
-3. Consult the contracts for API details
-4. Check the constitution for project principles
+1. Check log file (`etl.log`) for detailed error messages
+2. Review feature specification: `specs/001-etl-core-workflow/spec.md`
+3. Review API contracts: `specs/001-etl-core-workflow/contracts/`
+4. Contact development team
+
+---
+
+## Source
+
+- Feature Specification: specs/001-etl-core-workflow/spec.md
+- Implementation Plan: specs/001-etl-core-workflow/plan.md
+- Data Model: specs/001-etl-core-workflow/data-model.md
+- Research: specs/001-etl-core-workflow/research.md
+- API Contracts: specs/001-etl-core-workflow/contracts/*
+- Scope Definition: docs/v1/Plan.md

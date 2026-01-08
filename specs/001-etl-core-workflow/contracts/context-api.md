@@ -1,560 +1,106 @@
 # Context API Contract
 
-**Feature**: ETL Core Workflow  
-**Date**: January 8, 2026  
-**Purpose**: Define the Context API for daily ETL process state management
+**Feature Branch**: `001-etl-core-workflow`
+**Date**: 2026-01-08
+**Status**: Phase 1 Design
 
 ## Overview
 
-This document defines the Context API that holds runtime state for each day's ETL process. The Context is passed to each subprocess during execution and contains the current day's date, current subprocess status, data counts, and configuration.
+This document defines the Context API for the ETL tool. Context provides a centralized mechanism for transferring data between subprocesses, ensuring loose coupling and maintainable data flow architecture.
 
-**CRITICAL REQUIREMENT**: The Context is the **ONLY** mechanism for data transfer between subprocesses. All subprocesses (Extract, Transform, Load, Validate, Clean) must read from and write to the Context to exchange data. No subprocess should store data externally or access another subprocess's data directly.
+## API Overview
 
-## Context Entity
-
-### DailyProcessContext
-
-**Purpose**: Concrete implementation of context that holds runtime state for each day's ETL process.
+### Core Interface
 
 **Package**: `com.sdd.etl.context`
 
-**Design Pattern**: Immutable with Builder Pattern
+**Primary Classes**:
+- `ETLContext` - Main context implementation
+- `ContextManager` - Context lifecycle management
+- `ContextConstants` - Context key constants
 
 ---
 
-## API Contract
+## ETLContext Class
 
-### Class: DailyProcessContext
+### Purpose
+
+Provides thread-safe storage for runtime state of a single day's ETL process. All subprocesses read from and write to this context.
+
+### Class Definition
 
 ```java
 package com.sdd.etl.context;
 
-import com.sdd.etl.api.model.SourceDataModel;
-import com.sdd.etl.api.model.TargetDataModel;
-import com.sdd.etl.config.Configuration;
-import com.sdd.etl.enums.SubprocessType;
-
-import java.nio.file.Path;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Immutable context holding runtime state for a daily ETL process.
- *
- * This context is created for each day's ETL process and passed to
- * each subprocess during execution. It contains:
- * - The date being processed
- * - Current subprocess status
- * - Counts of records extracted, transformed, and loaded
- * - Configuration for the ETL process
- * - Start and end times for the process
- * - Data storage for inter-subprocess communication (extractedData, transformedData, tempFiles)
- *
- * Thread-safety: This class is immutable and thus thread-safe.
- * New instances are created for each subprocess state transition.
- *
- * CRITICAL: This Context is the ONLY mechanism for data transfer between subprocesses:
- * - Extract: WRITES extractedData field
- * - Transform: READS extractedData, WRITES transformedData
- * - Load: READS transformedData, UPDATES recordsLoaded
- * - Validate: READS recordsLoaded
- * - Clean: READS tempFiles
- *
- * DO NOT use static variables, files, databases, or any external storage for
- * inter-subprocess data transfer. ALL data MUST flow through this Context object.
+ * ETLContext - Runtime context for a single day's ETL process.
+ * All data transfer between subprocesses occurs through this context.
  */
-public final class DailyProcessContext {
-    
-    // Required fields
-    private final LocalDate date;
-    private final SubprocessType currentSubprocess;
-    private final Configuration configuration;
-    private final LocalDateTime startTime;
-    
-    // Optional fields (with defaults)
-    private final int recordsExtracted;
-    private final int recordsTransformed;
-    private final int recordsLoaded;
-    private final LocalDateTime endTime;
+public class ETLContext {
 
-    // Data storage for inter-subprocess communication
-    private final List<SourceDataModel> extractedData;  // Populated by Extract, read by Transform
-    private final List<TargetDataModel> transformedData; // Populated by Transform, read by Load
-    private final List<Path> tempFiles;                  // Populated by Extract/Transform/Load, read by Clean
-    
-    /**
-     * Private constructor - use Builder to create instances
-     */
-    private DailyProcessContext(Builder builder) {
-        this.date = builder.date;
-        this.currentSubprocess = builder.currentSubprocess;
-        this.configuration = builder.configuration;
-        this.startTime = builder.startTime;
-        this.recordsExtracted = builder.recordsExtracted;
-        this.recordsTransformed = builder.recordsTransformed;
-        this.recordsLoaded = builder.recordsLoaded;
-        this.endTime = builder.endTime;
-        this.extractedData = builder.extractedData != null
-            ? Collections.unmodifiableList(new ArrayList<>(builder.extractedData))
-            : Collections.emptyList();
-        this.transformedData = builder.transformedData != null
-            ? Collections.unmodifiableList(new ArrayList<>(builder.transformedData))
-            : Collections.emptyList();
-        this.tempFiles = builder.tempFiles != null
-            ? Collections.unmodifiableList(new ArrayList<>(builder.tempFiles))
-            : Collections.emptyList();
+    // Context keys (defined in ContextConstants)
+    public static final String KEY_CURRENT_DATE = "currentDate";
+    public static final String KEY_CURRENT_SUBPROCESS = "currentSubprocess";
+    public static final String KEY_CONFIG = "config";
+    public static final String KEY_EXTRACTED_COUNT = "extractedDataCount";
+    public static final String KEY_EXTRACTED_DATA = "extractedData";
+    public static final String KEY_TRANSFORMED_COUNT = "transformedDataCount";
+    public static final String KEY_TRANSFORMED_DATA = "transformedData";
+    public static final String KEY_LOADED_COUNT = "loadedDataCount";
+    public static final String KEY_VALIDATION_PASSED = "validationPassed";
+    public static final String KEY_VALIDATION_ERRORS = "validationErrors";
+    public static final String KEY_CLEANUP_PERFORMED = "cleanupPerformed";
 
-        validate();
-    }
-    
-    // ============ GETTERS ============
-    
-    /**
-     * @return The date being processed
-     */
-    public LocalDate getDate() {
-        return date;
-    }
-    
-    /**
-     * @return Current subprocess being executed
-     */
-    public SubprocessType getCurrentSubprocess() {
-        return currentSubprocess;
-    }
-    
-    /**
-     * @return Configuration for the ETL process
-     */
-    public Configuration getConfiguration() {
-        return configuration;
-    }
-    
-    /**
-     * @return Process start time
-     */
-    public LocalDateTime getStartTime() {
-        return startTime;
-    }
-    
-    /**
-     * @return Count of records extracted from sources
-     */
-    public int getRecordsExtracted() {
-        return recordsExtracted;
-    }
-    
-    /**
-     * @return Count of records transformed
-     */
-    public int getRecordsTransformed() {
-        return recordsTransformed;
-    }
-    
-    /**
-     * @return Count of records loaded to targets
-     */
-    public int getRecordsLoaded() {
-        return recordsLoaded;
-    }
-    
-    /**
-     * @return Process end time, null if not completed
-     */
-    public LocalDateTime getEndTime() {
-        return endTime;
-    }
+    private final Map<String, Object> data;
 
     /**
-     * @return Data extracted by Extract subprocess (read by Transform)
+     * Constructor - Initializes empty context.
      */
-    public List<SourceDataModel> getExtractedData() {
-        return extractedData;
-    }
+    public ETLContext();
 
     /**
-     * @return Data transformed by Transform subprocess (read by Load)
+     * Constructor - Initializes context with required fields.
+     * @param currentDate Processing date (YYYYMMDD format)
+     * @param config Configuration for this ETL run
      */
-    public List<TargetDataModel> getTransformedData() {
-        return transformedData;
-    }
+    public ETLContext(String currentDate, ETConfiguration config);
 
-    /**
-     * @return Temporary files created during execution (read by Clean)
-     */
-    public List<Path> getTempFiles() {
-        return tempFiles;
-    }
-    
-    // ============ BUILDER ============
-    
-    /**
-     * Creates a new builder for constructing DailyProcessContext instances.
-     * 
-     * @return New Builder instance
-     */
-    public static Builder builder() {
-        return new Builder();
-    }
-    
-    /**
-     * Creates a new builder initialized with values from an existing context.
-     * Useful for updating context while preserving existing values.
-     * 
-     * @param context Existing context to copy values from
-     * @return New Builder instance initialized with context values
-     */
-    public static Builder builder(DailyProcessContext context) {
-        return new Builder(context);
-    }
-    
-    /**
-     * Builder for DailyProcessContext instances.
-     * Follows fluent builder pattern for readable context construction.
-     */
-    public static final class Builder {
-        private LocalDate date;
-        private SubprocessType currentSubprocess = SubprocessType.NOT_STARTED;
-        private Configuration configuration;
-        private LocalDateTime startTime;
-        private int recordsExtracted = 0;
-        private int recordsTransformed = 0;
-        private int recordsLoaded = 0;
-        private LocalDateTime endTime;
+    // Getter methods with type safety
+    public String getCurrentDate();
+    public SubprocessType getCurrentSubprocess();
+    public ETConfiguration getConfig();
+    public int getExtractedDataCount();
+    public Object getExtractedData();
+    public int getTransformedDataCount();
+    public Object getTransformedData();
+    public int getLoadedDataCount();
+    public boolean isValidationPassed();
+    public List<String> getValidationErrors();
+    public boolean isCleanupPerformed();
 
-        // Data storage for inter-subprocess communication
-        private List<SourceDataModel> extractedData = new ArrayList<>();
-        private List<TargetDataModel> transformedData = new ArrayList<>();
-        private List<Path> tempFiles = new ArrayList<>();
-        
-        private Builder() {
-            // Default constructor
-        }
-        
-        private Builder(DailyProcessContext context) {
-            this.date = context.date;
-            this.currentSubprocess = context.currentSubprocess;
-            this.configuration = context.configuration;
-            this.startTime = context.startTime;
-            this.recordsExtracted = context.recordsExtracted;
-            this.recordsTransformed = context.recordsTransformed;
-            this.recordsLoaded = context.recordsLoaded;
-            this.endTime = context.endTime;
-            this.extractedData = new ArrayList<>(context.extractedData);
-            this.transformedData = new ArrayList<>(context.transformedData);
-            this.tempFiles = new ArrayList<>(context.tempFiles);
-        }
-        
-        /**
-         * Sets the date being processed (required).
-         * 
-         * @param date Date being processed
-         * @return This builder for method chaining
-         */
-        public Builder date(LocalDate date) {
-            this.date = date;
-            return this;
-        }
-        
-        /**
-         * Sets the current subprocess status.
-         * Defaults to NOT_STARTED if not set.
-         * 
-         * @param currentSubprocess Current subprocess type
-         * @return This builder for method chaining
-         */
-        public Builder currentSubprocess(SubprocessType currentSubprocess) {
-            this.currentSubprocess = currentSubprocess;
-            return this;
-        }
-        
-        /**
-         * Sets the configuration (required).
-         * 
-         * @param configuration ETL configuration
-         * @return This builder for method chaining
-         */
-        public Builder configuration(Configuration configuration) {
-            this.configuration = configuration;
-            return this;
-        }
-        
-        /**
-         * Sets the process start time (required).
-         * 
-         * @param startTime Process start time
-         * @return This builder for method chaining
-         */
-        public Builder startTime(LocalDateTime startTime) {
-            this.startTime = startTime;
-            return this;
-        }
-        
-        /**
-         * Sets the count of records extracted.
-         * Defaults to 0 if not set.
-         * 
-         * @param recordsExtracted Number of records extracted
-         * @return This builder for method chaining
-         */
-        public Builder recordsExtracted(int recordsExtracted) {
-            this.recordsExtracted = recordsExtracted;
-            return this;
-        }
-        
-        /**
-         * Sets the count of records transformed.
-         * Defaults to 0 if not set.
-         * 
-         * @param recordsTransformed Number of records transformed
-         * @return This builder for method chaining
-         */
-        public Builder recordsTransformed(int recordsTransformed) {
-            this.recordsTransformed = recordsTransformed;
-            return this;
-        }
-        
-        /**
-         * Sets the count of records loaded.
-         * Defaults to 0 if not set.
-         * 
-         * @param recordsLoaded Number of records loaded
-         * @return This builder for method chaining
-         */
-        public Builder recordsLoaded(int recordsLoaded) {
-            this.recordsLoaded = recordsLoaded;
-            return this;
-        }
-        
-        /**
-         * Sets the process end time.
-         * Should only be set when process completes.
-         *
-         * @param endTime Process end time
-         * @return This builder for method chaining
-         */
-        public Builder endTime(LocalDateTime endTime) {
-            this.endTime = endTime;
-            return this;
-        }
+    // Setter methods (state transitions)
+    public void setCurrentDate(String date);
+    public void setCurrentSubprocess(SubprocessType subprocess);
+    public void setConfig(ETConfiguration config);
+    public void setExtractedDataCount(int count);
+    public void setExtractedData(Object data);
+    public void setTransformedDataCount(int count);
+    public void setTransformedData(Object data);
+    public void setLoadedDataCount(int count);
+    public void setValidationPassed(boolean passed);
+    public void setValidationErrors(List<String> errors);
+    public void setCleanupPerformed(boolean performed);
 
-        /**
-         * Sets the extracted data (populated by Extract subprocess).
-         * This data will be read by Transform subprocess.
-         *
-         * @param extractedData List of extracted source data models
-         * @return This builder for method chaining
-         */
-        public Builder extractedData(List<SourceDataModel> extractedData) {
-            this.extractedData = extractedData != null ? new ArrayList<>(extractedData) : null;
-            return this;
-        }
+    // Generic get/set for extensibility
+    public <T> T get(String key, Class<T> type);
+    public void set(String key, Object value);
 
-        /**
-         * Sets the transformed data (populated by Transform subprocess).
-         * This data will be read by Load subprocess.
-         *
-         * @param transformedData List of transformed target data models
-         * @return This builder for method chaining
-         */
-        public Builder transformedData(List<TargetDataModel> transformedData) {
-            this.transformedData = transformedData != null ? new ArrayList<>(transformedData) : null;
-            return this;
-        }
-
-        /**
-         * Sets the temporary files list.
-         * These files will be cleaned up by Clean subprocess.
-         *
-         * @param tempFiles List of temporary file paths
-         * @return This builder for method chaining
-         */
-        public Builder tempFiles(List<Path> tempFiles) {
-            this.tempFiles = tempFiles != null ? new ArrayList<>(tempFiles) : null;
-            return this;
-        }
-        
-        /**
-         * Builds a new DailyProcessContext instance with the configured values.
-         * 
-         * @return New DailyProcessContext instance
-         * @throws IllegalStateException if required fields are not set
-         */
-        public DailyProcessContext build() {
-            validate();
-            return new DailyProcessContext(this);
-        }
-        
-        /**
-         * Validates builder state before building.
-         * 
-         * @throws IllegalStateException if validation fails
-         */
-        private void validate() {
-            if (date == null) {
-                throw new IllegalStateException("Date is required");
-            }
-            if (configuration == null) {
-                throw new IllegalStateException("Configuration is required");
-            }
-            if (startTime == null) {
-                throw new IllegalStateException("Start time is required");
-            }
-        }
-    }
-    
-    /**
-     * Validates context state.
-     * 
-     * @throws IllegalStateException if validation fails
-     */
-    private void validate() {
-        if (recordsExtracted < 0) {
-            throw new IllegalStateException("Records extracted cannot be negative");
-        }
-        if (recordsTransformed < 0) {
-            throw new IllegalStateException("Records transformed cannot be negative");
-        }
-        if (recordsLoaded < 0) {
-            throw new IllegalStateException("Records loaded cannot be negative");
-        }
-        if (recordsTransformed > recordsExtracted) {
-            throw new IllegalStateException(
-                "Records transformed cannot exceed records extracted");
-        }
-        if (recordsLoaded > recordsTransformed) {
-            throw new IllegalStateException(
-                "Records loaded cannot exceed records transformed");
-        }
-    }
-    
-    // ============ UTILITY METHODS ============
-    
-    /**
-     * Creates a copy of this context with updated subprocess status.
-     * 
-     * @param subprocessType New subprocess status
-     * @return New context with updated subprocess status
-     */
-    public DailyProcessContext withSubprocess(SubprocessType subprocessType) {
-        return builder(this).currentSubprocess(subprocessType).build();
-    }
-    
-    /**
-     * Creates a copy of this context with updated records extracted count.
-     * 
-     * @param count New records extracted count
-     * @return New context with updated count
-     */
-    public DailyProcessContext withRecordsExtracted(int count) {
-        return builder(this).recordsExtracted(count).build();
-    }
-    
-    /**
-     * Creates a copy of this context with updated records transformed count.
-     * 
-     * @param count New records transformed count
-     * @return New context with updated count
-     */
-    public DailyProcessContext withRecordsTransformed(int count) {
-        return builder(this).recordsTransformed(count).build();
-    }
-    
-/**
- * Creates a copy of this context with updated records loaded count.
- *
- * @param count New records loaded count
- * @return New context with updated count
- */
-
-/**
- * Creates a copy of this context with extracted data.
- * Used by Extract subprocess to store data for Transform.
- *
- * @param data List of extracted source data models
- * @return New context with extracted data
- */
-public DailyProcessContext withExtractedData(List<SourceDataModel> data) {
-    return builder(this).extractedData(data).build();
-}
-
-/**
- * Creates a copy of this context with transformed data.
- * Used by Transform subprocess to store data for Load.
- *
- * @param data List of transformed target data models
- * @return New context with transformed data
- */
-public DailyProcessContext withTransformedData(List<TargetDataModel> data) {
-    return builder(this).transformedData(data).build();
-}
-
-/**
- * Creates a copy of this context with additional temporary files.
- * Used by Extract, Transform, and Load subprocesses to track temp files.
- *
- * @param files List of temporary file paths to add
- * @return New context with updated temp files list
- */
-public DailyProcessContext withTempFiles(List<Path> files) {
-    List<Path> updated = new ArrayList<>(this.tempFiles);
-    if (files != null) {
-        updated.addAll(files);
-    }
-    return builder(this).tempFiles(updated).build();
-}
-    public DailyProcessContext withRecordsLoaded(int count) {
-        return builder(this).recordsLoaded(count).build();
-    }
-    
-    /**
-     * Creates a copy of this context marked as completed.
-     * 
-     * @return New context marked as completed
-     */
-    public DailyProcessContext markCompleted() {
-        return builder(this)
-            .currentSubprocess(SubprocessType.COMPLETED)
-            .endTime(LocalDateTime.now())
-            .build();
-    }
-    
-    /**
-     * Creates a copy of this context marked as failed.
-     * 
-     * @return New context marked as failed
-     */
-    public DailyProcessContext markFailed() {
-        return builder(this)
-            .currentSubprocess(SubprocessType.FAILED)
-            .endTime(LocalDateTime.now())
-            .build();
-    }
-    
-    // ============ OBJECT METHODS ============
-    
-    @Override
-    public boolean equals(Object obj) {
-        // Implementation for equality comparison
-        // Based on date, configuration, and start time
-    }
-    
-    @Override
-    public int hashCode() {
-        // Implementation for hash code
-        // Based on date, configuration, and start time
-    }
-    
-    @Override
-    public String toString() {
-        return String.format(
-            "DailyProcessContext{date=%s, subprocess=%s, extracted=%d, transformed=%d, loaded=%d}",
-            date, currentSubprocess, recordsExtracted, recordsTransformed, recordsLoaded
-        );
-    }
+    // Utility methods
+    public Map<String, Object> getAll();
+    public void clear();
 }
 ```
 
@@ -562,133 +108,333 @@ public DailyProcessContext withTempFiles(List<Path> files) {
 
 ## SubprocessType Enum
 
-```java
-package com.sdd.etl.enums;
+### Purpose
 
-/**
- * Enumeration of subprocess types in the ETL workflow.
- * 
- * The ETL workflow executes subprocesses in this order:
- * NOT_STARTED -> EXTRACT -> TRANSFORM -> LOAD -> VALIDATE -> CLEAN -> COMPLETED
- * 
- * If any subprocess fails, the state transitions to FAILED.
- */
+Represents the five subprocess types in the ETL pipeline.
+
+### Enum Definition
+
+```java
+package com.sdd.etl.context;
+
 public enum SubprocessType {
-    /**
-     * Process has not started
-     */
-    NOT_STARTED,
-    
-    /**
-     * Extract subprocess: extract data from all configured sources
-     */
     EXTRACT,
-    
-    /**
-     * Transform subprocess: transform source data to target data formats
-     */
     TRANSFORM,
-    
-    /**
-     * Load subprocess: load transformed data to all configured targets
-     */
     LOAD,
-    
-    /**
-     * Validate subprocess: validate loaded data
-     */
     VALIDATE,
-    
-    /**
-     * Clean subprocess: clean up temporary resources
-     */
-    CLEAN,
-    
-    /**
-     * All subprocesses completed successfully
-     */
-    COMPLETED,
-    
-    /**
-     * Process failed
-     */
-    FAILED
+    CLEAN
 }
 ```
 
 ---
 
-## Usage Examples
+## ContextManager Class
 
-### Creating Initial Context
+### Purpose
 
-```java
-LocalDate date = LocalDate.of(2025, 1, 1);
-Configuration config = configurationParser.parse("/path/to/config.ini");
+Manages context lifecycle: creation, validation, and cleanup.
 
-DailyProcessContext context = DailyProcessContext.builder()
-    .date(date)
-    .configuration(config)
-    .startTime(LocalDateTime.now())
-    .build();
-```
-
-### Updating Context During Subprocess Execution
+### Class Definition
 
 ```java
-// After extract subprocess
-List<SourceDataModel> extracted = extractFromSources();
-context = context.withSubprocess(SubprocessType.EXTRACT)
-               .withRecordsExtracted(extracted.size())
-               .withExtractedData(extracted);  // Store data for Transform
+package com.sdd.etl.context;
 
-// After transform subprocess
-List<TargetDataModel> transformed = transformData(context.getExtractedData());
-context = context.withSubprocess(SubprocessType.TRANSFORM)
-               .withRecordsTransformed(transformed.size())
-               .withTransformedData(transformed);  // Store data for Load
+/**
+ * ContextManager - Manages lifecycle of ETLContext instances.
+ */
+public class ContextManager {
 
-// After load subprocess
-context = context.withSubprocess(SubprocessType.LOAD)
-               .withRecordsLoaded(transformed.size());
+    /**
+     * Creates a new context for a single day's ETL process.
+     * @param date Processing date (YYYYMMDD format)
+     * @param config ETL configuration
+     * @return Initialized ETLContext
+     * @throws IllegalArgumentException If date or config is invalid
+     */
+    public static ETLContext createContext(String date, ETConfiguration config);
 
-// Clean subprocess reads temp files for cleanup
-List<Path> tempFiles = context.getTempFiles();
-cleanUpFiles(tempFiles);
-```
+    /**
+     * Validates context integrity before subprocess execution.
+     * @param context Context to validate
+     * @param expectedSubprocess Expected current subprocess
+     * @return true if context is valid, false otherwise
+     */
+    public static boolean validateContext(ETLContext context, SubprocessType expectedSubprocess);
 
-### Marking Process as Completed
+    /**
+     * Creates an immutable snapshot of context for debugging.
+     * @param context Context to snapshot
+     * @return Immutable map containing context data
+     */
+    public static Map<String, Object> snapshot(ETLContext context);
 
-```java
-context = context.markCompleted();
-// context.getCurrentSubprocess() == SubprocessType.COMPLETED
-// context.getEndTime() != null
-```
-
-### Marking Process as Failed
-
-```java
-context = context.markFailed();
-// context.getCurrentSubprocess() == SubprocessType.FAILED
-// context.getEndTime() != null
+    /**
+     * Logs current context state for troubleshooting.
+     * @param context Context to log
+     * @param logger Logger instance
+     */
+    public static void logContextState(ETLContext context, ETLogger logger);
+}
 ```
 
 ---
 
-## Testing Requirements
+## ContextConstants Class
 
-### Unit Tests
+### Purpose
 
-- **DailyProcessContextBuilderTest**: Test builder pattern with all field combinations
-- **DailyProcessContextValidationTest**: Test validation rules
-- **DailyProcessContextImmutabilityTest**: Ensure immutability
-- **DailyProcessContextCopyTest**: Test context copying and updates
+Defines all context keys as constants for type safety and consistency.
 
-### Edge Cases to Test
+### Class Definition
 
-- Null values for required fields
-- Negative record counts
-- Record counts violating business rules (transformed > extracted)
-- Multiple context updates in sequence
-- Thread-safety of immutable instances
-- Builder copy from existing context
+```java
+package com.sdd.etl.context;
+
+/**
+ * ContextConstants - Defines all context key constants.
+ */
+public final class ContextConstants {
+
+    // Prevent instantiation
+    private ContextConstants() {}
+
+    // Required fields (set at context creation)
+    public static final String CURRENT_DATE = "currentDate";
+    public static final String CONFIG = "config";
+
+    // Runtime state fields (set during subprocess execution)
+    public static final String CURRENT_SUBPROCESS = "currentSubprocess";
+    public static final String EXTRACTED_DATA_COUNT = "extractedDataCount";
+    public static final String EXTRACTED_DATA = "extractedData";
+    public static final String TRANSFORMED_DATA_COUNT = "transformedDataCount";
+    public static final String TRANSFORMED_DATA = "transformedData";
+    public static final String LOADED_DATA_COUNT = "loadedDataCount";
+    public static final String VALIDATION_PASSED = "validationPassed";
+    public static final String VALIDATION_ERRORS = "validationErrors";
+    public static final String CLEANUP_PERFORMED = "cleanupPerformed";
+
+    // Metadata fields (optional)
+    public static final String START_TIME = "startTime";
+    public static final String END_TIME = "endTime";
+    public static final String DURATION_MS = "durationMs";
+}
+```
+
+---
+
+## Context State Machine
+
+### State Transitions
+
+```
+[Initial]
+  currentDate: set
+  currentSubprocess: EXTRACT
+  config: set
+  extractedDataCount: 0
+  extractedData: null
+  transformedDataCount: 0
+  transformedData: null
+  loadedDataCount: 0
+  validationPassed: false
+  cleanupPerformed: false
+
+  ↓ (After Extract)
+
+[Extracted]
+  currentSubprocess: TRANSFORM
+  extractedDataCount: >0
+  extractedData: List<SourceDataModel> or Map<String, Object>
+
+  ↓ (After Transform)
+
+[Transformed]
+  currentSubprocess: LOAD
+  transformedDataCount: >0
+  transformedData: List<TargetDataModel> or Map<String, Object>
+
+  ↓ (After Load)
+
+[Loaded]
+  currentSubprocess: VALIDATE
+  loadedDataCount: >0
+
+  ↓ (After Validate)
+
+[Validated]
+  currentSubprocess: CLEAN
+  validationPassed: true/false
+
+  ↓ (After Clean)
+
+[Complete]
+  currentSubprocess: CLEAN
+  cleanupPerformed: true
+```
+
+---
+
+## Context Usage Examples
+
+### 1. Create Context for a Day
+
+```java
+// Load configuration
+ETConfiguration config = ConfigurationLoader.load("/path/to/config.ini");
+
+// Create context for a specific date
+ETLContext context = ContextManager.createContext("20250101", config);
+
+// Context is initialized with required fields
+assert context.getCurrentDate().equals("20250101");
+assert context.getConfig() == config;
+assert context.getCurrentSubprocess() == SubprocessType.EXTRACT;
+assert context.getExtractedDataCount() == 0;
+```
+
+---
+
+### 2. Subprocess Writes to Context
+
+```java
+// Extract subprocess writes extracted data and count to context
+public class ExtractSubprocess {
+    public SubprocessResult execute(ETLContext context) {
+        // Extract actual data from sources
+        List<SourceDataModel> extractedData = extractFromSources(context.getConfig());
+        int count = extractedData.size();
+
+        // Write both data and count to context (FR-028)
+        context.setExtractedData(extractedData);
+        context.setExtractedDataCount(count);
+        context.setCurrentSubprocess(SubprocessType.TRANSFORM);
+
+        return new SubprocessResult(true, count, null, System.currentTimeMillis());
+    }
+}
+```
+
+---
+
+### 3. Subprocess Reads from Context
+
+```java
+// Transform subprocess reads extracted data from context (FR-028)
+public class TransformSubprocess {
+    public SubprocessResult execute(ETLContext context) {
+        // Read actual extracted data from context
+        Object extractedDataObj = context.getExtractedData();
+
+        // Validate that previous subprocess completed
+        if (extractedDataObj == null) {
+            throw new IllegalStateException("No extracted data found in context");
+        }
+
+        // Cast to expected type and transform
+        List<SourceDataModel> extractedData = (List<SourceDataModel>) extractedDataObj;
+        List<TargetDataModel> transformedData = transform(extractedData);
+
+        // Write both data and count to context (FR-029)
+        context.setTransformedData(transformedData);
+        context.setTransformedDataCount(transformedData.size());
+        context.setCurrentSubprocess(SubprocessType.LOAD);
+
+        return new SubprocessResult(true, transformedData.size(), null, System.currentTimeMillis());
+    }
+}
+```
+
+---
+
+### 4. Context Validation
+
+```java
+// Before executing a subprocess, validate context state
+ETLContext context = ...;
+boolean isValid = ContextManager.validateContext(context, SubprocessType.TRANSFORM);
+if (!isValid) {
+    throw new IllegalStateException("Context is invalid for TRANSFORM subprocess");
+}
+```
+
+---
+
+### 5. Context Snapshot for Debugging
+
+```java
+// Create immutable snapshot for logging/debugging
+ETLContext context = ...;
+Map<String, Object> snapshot = ContextManager.snapshot(context);
+
+// Snapshot can be safely logged without modifying context
+logger.info("Context state: " + snapshot);
+```
+
+---
+
+## Thread Safety
+
+**Guarantee**: ETLContext is thread-safe for single-process execution.
+
+**Implementation**: Uses `ThreadLocal` pattern for context storage, ensuring each thread has its own context instance.
+
+**Concurrent Executions**: The CLI tool detects and prevents concurrent executions (FR-024), so only one context instance is active at any time.
+
+---
+
+## Error Handling
+
+### Invalid Context State
+
+**Error**: `IllegalStateException`
+
+**Condition**: Context is in invalid state for requested operation.
+
+**Example**:
+```java
+ETLContext context = new ETLContext("20250101", config);
+
+// Extract not yet completed, but trying to read transformed count
+int count = context.getTransformedDataCount(); // Returns 0 (not error)
+
+// Trying to execute Transform before Extract
+context.setCurrentSubprocess(SubprocessType.TRANSFORM); // Valid
+// But extractedDataCount is still 0, indicating previous subprocess didn't complete
+if (context.getExtractedDataCount() == 0) {
+    throw new IllegalStateException("Extract subprocess did not complete");
+}
+```
+
+---
+
+### Context Corruption
+
+**Error**: `IllegalStateException`
+
+**Condition**: Context data is corrupted or contains invalid values.
+
+**Detection**: Context validation before each subprocess execution.
+
+**Recovery**: Process stops, user must investigate and restart manually (FR-025).
+
+---
+
+## Feature Requirements Mapping
+
+| FR # | Requirement | API Coverage |
+|------|-------------|--------------|
+| FR-014 | Context creation with date, subprocess, counts, config | ✅ ETLContext constructor, getters |
+| FR-015 | Pass context to each subprocess | ✅ ContextManager.createContext() |
+| FR-027 | All sub-components use context for data transfer | ✅ ETLContext get/set methods |
+| FR-028 | Extract writes to context, Transform reads from context | ✅ setExtractedDataCount(), getExtractedDataCount() |
+| FR-029 | Transform writes to context, Load reads from context | ✅ setTransformedDataCount(), getTransformedDataCount() |
+| FR-030 | Load writes to context, Validate reads from context | ✅ setLoadedDataCount(), getLoadedDataCount() |
+| FR-031 | Validate writes to context, Clean reads from context | ✅ setValidationPassed(), isValidationPassed() |
+
+---
+
+## Source
+
+- Feature Specification: FR-014 through FR-031, User Story 7 (Context-Based Data Transfer)
+- Data Model: ETLContext entity definition
+- Research: Context implementation pattern (ThreadLocal + HashMap)

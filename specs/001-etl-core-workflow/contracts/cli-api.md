@@ -1,247 +1,290 @@
 # CLI API Contract
 
-**Feature**: ETL Core Workflow  
-**Date**: January 8, 2026  
-**Purpose**: Define the command-line interface API contracts
+**Feature Branch**: `001-etl-core-workflow`
+**Date**: 2026-01-08
+**Status**: Phase 1 Design
 
 ## Overview
 
-This document defines the CLI interface API for the ETL tool. The tool exposes a single command with multiple parameters for executing ETL processes.
+This document defines the CLI interface contract for the ETL tool. All CLI functionality is exposed through command-line arguments with no GUI or web interface.
 
-## Command Specification
+## Command Structure
 
-### Main Command: `etl`
+### Main Entry Point
 
-The main entry point for the ETL tool.
+**Command**: `java -jar etl-tool.jar [options]`
 
-**Usage**: `etl --from <date> --to <date> --config <path> [options]`
+**Required Parameters**:
+- `--from <YYYYMMDD>` - Inclusive start date for ETL processing
+- `--to <YYYYMMDD>` - Inclusive end date for ETL processing
+- `--config <path>` - Absolute path to INI configuration file
 
-### Required Parameters
+**Optional Parameters**:
+- `--help` - Display usage information and exit
 
-| Parameter | Type | Format | Description |
-|-----------|------|--------|-------------|
-| `--from` | String | YYYYMMDD | Inclusive start date for ETL process |
-| `--to` | String | YYYYMMDD | Inclusive end date for ETL process |
-| `--config` | Path | File path | Path to INI configuration file |
-
-### Optional Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `--help` | Flag | N/A | Display help message and exit |
-| `--version` | Flag | N/A | Display version information and exit |
-
-## Parameter Validation Rules
-
-### Date Validation (`--from`, `--to`)
-
-**Format**: YYYYMMDD (e.g., 20250101 for January 1, 2025)
-
-**Validation Steps**:
-1. Check format is exactly 8 digits
-2. Parse as valid date using `DateTimeFormatter.ofPattern("yyyyMMdd")`
-3. Validate month is between 01-12
-4. Validate day is valid for the given month/year (handles leap years)
-
-**Error Conditions**:
-| Condition | Error Message | Example |
-|-----------|---------------|----------|
-| Not 8 characters | `Error: Date must be in YYYYMMDD format (8 digits)` | `--from 2025-01-01` |
-| Invalid month | `Error: Invalid date - month must be between 01 and 12` | `--from 20251301` |
-| Invalid day | `Error: Invalid date - day is out of range for month` | `--from 20250132` |
-| From date after to date | `Error: From date must be before or equal to to date` | `--from 20250105 --to 20250101` |
-
-**Valid Examples**:
-- `--from 20250101 --to 20250131` (January 2025)
-- `--from 20240229 --to 20240229` (Leap day, single day)
-- `--from 20250101 --to 20250101` (Single day)
-
-### Configuration File Validation (`--config`)
-
-**Validation Steps**:
-1. Check file path is provided
-2. Check file exists at specified path
-3. Check file has `.ini` extension (case-insensitive)
-4. Check file is readable
-
-**Error Conditions**:
-| Condition | Error Message | Example |
-|-----------|---------------|----------|
-| Not provided | `Error: Configuration file path is required` | Missing `--config` |
-| File not found | `Error: Configuration file not found: /path/to/config.ini` | Non-existent file |
-| Wrong extension | `Error: Configuration file must be in INI format (.ini extension)` | `--config config.json` |
-| File not readable | `Error: Configuration file is not readable: /path/to/config.ini` | Permission denied |
-
-**Valid Examples**:
-- `--config /home/etl/etl-config.ini`
-- `--config ./config/production.ini`
-- `--config config.ini`
-
-## Help Command
-
-### `--help` Flag
-
-Displays usage information and parameter descriptions.
-
-**Output Format**:
-```text
-ETL Tool - Extract, Transform, Load Data Pipeline
-
-Usage:
-  etl --from YYYYMMDD --to YYYYMMDD --config <path> [options]
-
-Required Parameters:
-  --from <date>    Inclusive start date in YYYYMMDD format (e.g., 20250101)
-  --to <date>      Inclusive end date in YYYYMMDD format (e.g., 20250131)
-  --config <path>  Path to INI configuration file
-
-Optional Parameters:
-  --help           Display this help message and exit
-  --version        Display version information and exit
-
-Examples:
-  etl --from 20250101 --to 20250131 --config config.ini
-  etl --from 20250201 --to 20250201 --config /path/to/config.ini
-
-For more information, visit: https://github.com/example/sdd-etl-tool
-```
+---
 
 ## Exit Codes
 
-| Code | Meaning | Description |
-|------|---------|-------------|
-| 0 | Success | ETL process completed successfully |
-| 1 | Parameter Error | Invalid parameters or configuration file |
-| 2 | Execution Error | ETL process failed during execution |
-| 3 | Concurrent Execution | Another ETL process is already running |
+| Code | Meaning | Condition |
+|------|---------|-----------|
+| 0 | Success | ETL process completed successfully for all days |
+| 1 | Input Validation Error | Invalid parameters (format, missing file, date range) |
+| 2 | Concurrent Execution | Another ETL process is already running |
+| 3 | ETL Process Error | Any subprocess or day failed during execution |
+| 4 | Configuration Error | Invalid or corrupted INI configuration file |
+| 5 | Unexpected Error | Unhandled exception or system error |
 
-## Behavior Specifications
+---
 
-### Normal Execution Flow
+## Usage Examples
 
-1. **Parse Command Line Arguments**
-   - Parse `--from`, `--to`, `--config` parameters
-   - If `--help` or `--version` provided, display information and exit with code 0
+### 1. Standard Execution
 
-2. **Validate Parameters**
-   - Validate date formats
-   - Validate date range (from <= to)
-   - Validate configuration file exists and is readable
-   - If validation fails, display error message and exit with code 1
-
-3. **Load Configuration**
-   - Parse INI configuration file
-   - Validate configuration structure
-   - If configuration invalid, display error message and exit with code 1
-
-4. **Detect Concurrent Execution**
-   - Attempt to acquire file lock
-   - If lock acquisition fails, display error and exit with code 3
-
-5. **Execute ETL Process**
-   - Iterate through date range from `--from` to `--to`
-   - For each date, execute daily ETL workflow
-   - If any day's process fails, stop execution and exit with code 2
-
-6. **Cleanup and Exit**
-   - Release file lock
-   - Log completion status
-   - Exit with code 0 if all days completed successfully
-
-### Error Handling
-
-All errors should display:
-1. Clear error message
-2. Suggested resolution (when applicable)
-3. Exit code
-
-**Error Message Format**:
-```text
-Error: [Description of the error]
-
-Suggestion: [What the user can do to fix it]
-
-Example:
-Error: From date must be before or equal to to date (20250105 > 20250101)
-
-Suggestion: Ensure the from date is earlier than or equal to the to date
-
-Usage: etl --from <date> --to <date> --config <path>
-  etl --help for more information
+```bash
+java -jar etl-tool.jar --from 20250101 --to 20250107 --config /path/to/config.ini
 ```
 
-## API Contract Summary
+**Behavior**:
+- Validates all parameters
+- Loads configuration from `/path/to/config.ini`
+- Processes dates 2025-01-01 through 2025-01-07 (7 days)
+- For each day: extract → transform → load → validate → clean
+- Logs status to console and log file
+- Exits with code 0 if all days succeed
 
-### Public Methods
+---
 
-The CLI implementation must provide these public methods:
+### 2. Single-Day Execution
 
-```java
-package com.sdd.etl.cli;
-
-/**
- * Main CLI entry point
- */
-public class ETLCliCommand {
-    
-    /**
-     * Executes the ETL command
-     * @param args Command line arguments
-     * @return Exit code
-     */
-    public int execute(String[] args);
-    
-    /**
-     * Validates command line parameters
-     * @param parameters Parsed parameters
-     * @throws ParameterValidationException if validation fails
-     */
-    public void validateParameters(CLIParameters parameters);
-    
-    /**
-     * Displays help message
-     */
-    public void displayHelp();
-    
-    /**
-     * Displays version information
-     */
-    public void displayVersion();
-}
-
-/**
- * Parsed CLI parameters
- */
-public class CLIParameters {
-    private LocalDate fromDate;
-    private LocalDate toDate;
-    private Path configPath;
-    private boolean help;
-    private boolean version;
-    
-    // Getters and setters
-}
+```bash
+java -jar etl-tool.jar --from 20250101 --to 20250101 --config /path/to/config.ini
 ```
 
-## Testing Requirements
+**Behavior**:
+- Processes only 2025-01-01
+- Same subprocess sequence applies
+- Logs completion status
 
-### Unit Tests
+---
 
-- **ParameterValidatorTest**: Validate all parameter validation rules
-- **HelpCommandTest**: Verify help message format and content
-- **ETLCliCommandTest**: Test command execution with valid and invalid inputs
+### 3. Help Command
 
-### Integration Tests
+```bash
+java -jar etl-tool.jar --help
+```
 
-- **CLIIntegrationTest**: Test full CLI execution flow with sample configuration
+**Output**:
+```
+ETL Tool - Extract, Transform, Load data across multiple dates
 
-### Edge Cases to Test
+Usage:
+  java -jar etl-tool.jar --from <YYYYMMDD> --to <YYYYMMDD> --config <path>
 
-- Invalid date formats (wrong length, invalid characters)
-- Invalid date ranges (from > to)
-- Missing or non-existent configuration file
-- Configuration file with wrong extension
-- Concurrent execution attempts
-- Leap day dates
-- Month boundaries
-- Year boundaries
+Required Parameters:
+  --from <YYYYMMDD>    Inclusive start date (format: YYYYMMDD)
+  --to <YYYYMMDD>      Inclusive end date (format: YYYYMMDD)
+  --config <path>      Absolute path to INI configuration file
+
+Optional Parameters:
+  --help               Display this help message
+
+Examples:
+  java -jar etl-tool.jar --from 20250101 --to 20250107 --config /path/to/config.ini
+  java -jar etl-tool.jar --help
+
+Exit Codes:
+  0 - Success
+  1 - Input validation error
+  2 - Concurrent execution detected
+  3 - ETL process error
+  4 - Configuration error
+  5 - Unexpected error
+```
+
+---
+
+## Input Validation Rules
+
+### Date Format Validation
+
+**Rule**: Dates must be in YYYYMMDD format.
+
+**Valid Examples**:
+- `20250101` - January 1, 2025
+- `20251231` - December 31, 2025
+
+**Invalid Examples**:
+- `2025-01-01` - Wrong format (dashes)
+- `01/01/2025` - Wrong format (slashes)
+- `20251301` - Invalid month (13)
+- `20250132` - Invalid day (32)
+
+**Error Message**:
+```
+Error: Invalid date format for --from/--to parameter.
+Expected format: YYYYMMDD (e.g., 20250101)
+Provided value: <invalid_value>
+```
+
+---
+
+### Date Range Validation
+
+**Rule**: `--from` date must be ≤ `--to` date.
+
+**Invalid Example**:
+```bash
+java -jar etl-tool.jar --from 20250107 --to 20250101 --config /path/to/config.ini
+```
+
+**Error Message**:
+```
+Error: Invalid date range.
+From date (20250107) must be before or equal to To date (20250101).
+```
+
+---
+
+### Configuration File Validation
+
+**Rule**: Configuration file must exist and be readable.
+
+**Invalid Example**:
+```bash
+java -jar etl-tool.jar --from 20250101 --to 20250107 --config /nonexistent/path/config.ini
+```
+
+**Error Message**:
+```
+Error: Configuration file not found or not readable.
+Path: /nonexistent/path/config.ini
+```
+
+---
+
+### Concurrent Execution Detection
+
+**Rule**: Only one ETL process can run at a time.
+
+**Error Message**:
+```
+Error: Another ETL process is already running.
+Please wait for it to complete before starting a new process.
+Lock file: <lock_file_path>
+```
+
+---
+
+## Console Output Format
+
+### 1. Startup Banner
+
+```
+ETL Tool v1.0.0
+Starting ETL process...
+  From: 20250101
+  To:  20250107
+  Config: /path/to/config.ini
+```
+
+---
+
+### 2. Per-Day Progress
+
+```
+Processing date: 20250101
+  [EXTRACT]   Success (1000 records)
+  [TRANSFORM] Success (1000 records)
+  [LOAD]      Success (1000 records to 2 targets)
+  [VALIDATE]  Success (all rules passed)
+  [CLEAN]     Success
+  Result: Success
+
+Processing date: 20250102
+  [EXTRACT]   Failed: Connection timeout
+  Result: Failed
+Error: Day 20250102 failed during Extract subprocess.
+Process stopped. No further dates processed.
+```
+
+---
+
+### 3. Completion Summary
+
+```
+ETL Process Completed
+  Total Days: 7
+  Successful: 7
+  Failed: 0
+  Duration: 00:05:23
+```
+
+---
+
+### 4. Error Output
+
+```
+Error: <error_description>
+  Date: <YYYYMMDD>
+  Subprocess: <EXTRACT|TRANSFORM|LOAD|VALIDATE|CLEAN>
+  Details: <detailed_error_message>
+
+Suggested Action: <action_for_user>
+```
+
+---
+
+## Concurrent Execution Locking
+
+**Mechanism**: File lock using `java.nio.channels.FileLock`
+
+**Lock File Location**: `<application_dir>/.etl.lock`
+
+**Behavior**:
+1. On startup, attempt to acquire exclusive lock on `.etl.lock`
+2. If lock acquired, proceed with ETL process
+3. If lock not acquired, display error and exit with code 2
+4. Lock automatically released on JVM exit (normal or crash)
+5. Manual intervention required if lock file exists after crash
+
+**Recovery After Crash**:
+```bash
+# User manually removes lock file if stale
+rm .etl.lock
+# Then retry ETL process
+java -jar etl-tool.jar --from 20250101 --to 20250107 --config /path/to/config.ini
+```
+
+---
+
+## Logging
+
+**Console Logging**: Always enabled with INFO level by default.
+
+**File Logging**: Enabled by default, path specified in configuration.
+
+**Log Levels**:
+- `INFO` - Normal progress updates (subprocess completion, day completion)
+- `WARN` - Non-fatal issues (no data extracted, retry not applicable)
+- `ERROR` - Process failures (subprocess failure, day failure, system error)
+
+---
+
+## Feature Requirements Mapping
+
+| FR # | Requirement | Contract Coverage |
+|------|-------------|-------------------|
+| FR-001 | Required CLI parameters | ✅ --from, --to, --config |
+| FR-002 | Input validation | ✅ Date format, file existence, date range |
+| FR-003 | --help command | ✅ Usage display |
+| FR-024 | Concurrent execution detection | ✅ File lock mechanism |
+
+---
+
+## Source
+
+- Feature Specification: FR-001 through FR-003, FR-024, FR-025
+- User Stories: US1 (Command Line Execution)
+- Edge Cases: Concurrent execution, Invalid date range, Missing/corrupted config
+- Clarifications: No retry, manual restart required

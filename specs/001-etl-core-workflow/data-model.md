@@ -1,463 +1,388 @@
 # Data Model: ETL Core Workflow
 
-**Feature**: ETL Core Workflow  
-**Date**: January 8, 2026  
-**Purpose**: Define data models, entities, and their relationships for ETL core workflow
+**Feature Branch**: `001-etl-core-workflow`
+**Date**: 2026-01-08
+**Status**: Phase 1 Design
 
 ## Overview
 
-This document defines the data models for the ETL core workflow, including:
-- Configuration entity
-- DailyProcessContext entity (concrete implementation)
-- Source Data Model API (abstract)
-- Target Data Model API (abstract)
-- Supporting enums and value objects
+This document defines the data entities and their relationships for the ETL Core Workflow feature. The data model supports day-by-day ETL processing with context-based data transfer between subprocesses.
 
-## Entity Definitions
+## Entities
 
-### 1. Configuration
+### 1. CommandLineArguments
 
-**Purpose**: Stores all configuration settings for the ETL process, including data sources, targets, and transformation rules.
-
-**Package**: `com.sdd.etl.config`
+**Description**: Parsed command-line input from user.
 
 **Fields**:
-| Field | Type | Description | Validation |
-|-------|------|-------------|------------|
-| sources | List<SourceConfig> | List of data source configurations | At least one source required |
-| targets | List<TargetConfig> | List of data target configurations | At least one target required |
-| transforms | List<TransformConfig> | List of transformation rules | Optional, default transformations if empty |
-| validation | ValidationConfig | Validation criteria and rules | Required |
-| logging | LoggingConfig | Logging configuration | Required, with defaults |
-
-**State Transitions**: Immutable (loaded once at startup)
+- `fromDate` (String, required) - Start date in YYYYMMDD format (inclusive)
+- `toDate` (String, required) - End date in YYYYMMDD format (inclusive)
+- `configPath` (String, required) - Absolute path to INI configuration file
+- `helpRequested` (boolean) - True if user requested help (--help flag)
 
 **Validation Rules**:
-- `sources` cannot be empty
-- `targets` cannot be empty
-- Each `source` must have unique name
-- Each `target` must have unique name
-- Source and target names must be unique across both lists
+- `fromDate` must be valid date format (YYYYMMDD)
+- `toDate` must be valid date format (YYYYMMDD)
+- `fromDate` must be ≤ `toDate` (edge case: invalid date range)
+- `configPath` must exist and be readable (edge case: missing config file)
+- Either all three required parameters are provided OR help is requested
+
+**Source**: FR-001, FR-002
 
 ---
 
-### 2. SourceConfig
+### 2. ETConfiguration
 
-**Purpose**: Configuration for a single data source.
-
-**Package**: `com.sdd.etl.config`
+**Description**: Configuration loaded from INI file containing all ETL process settings.
 
 **Fields**:
-| Field | Type | Description | Validation |
-|-------|------|-------------|------------|
-| name | String | Unique identifier for this source | Required, alphanumeric + underscore |
-| type | String | Source type (e.g., "database", "file", "api") | Required |
-| connectionString | String | Connection string or URI | Required |
-| credentials | Credentials | Authentication credentials | Optional (anonymous sources) |
-| primaryKeyField | String | Field name used for unique record identification | Required |
-| additionalProperties | Map<String, String> | Additional source-specific properties | Optional |
+- `sources` (List<SourceConfig>) - Data source configurations
+- `targets` (List<TargetConfig>) - Data target configurations
+- `transformations` (List<TransformationConfig>) - Transformation rules
+- `validationRules` (List<ValidationConfig>) - Validation criteria
+- `logging` (LoggingConfig) - Logging settings
 
-**State Transitions**: Immutable (loaded from INI file)
+**Sub-Entities**:
+
+#### SourceConfig
+- `name` (String, required) - Source identifier
+- `type` (String, required) - Source type (e.g., "database", "api", "file")
+- `connectionString` (String, required) - Connection details including credentials
+- `primaryKeyField` (String, required) - Primary key field name for unique identification
+- `extractQuery` (String, optional) - Query or fetch pattern for extraction
+- `dateField` (String, optional) - Field name used for date filtering
+
+#### TargetConfig
+- `name` (String, required) - Target identifier
+- `type` (String, required) - Target type (e.g., "database", "api", "file")
+- `connectionString` (String, required) - Connection details including credentials
+- `batchSize` (int, optional) - Batch size for loading (default: 1000)
+
+#### TransformationConfig
+- `name` (String, required) - Transformation rule identifier
+- `sourceField` (String, required) - Source field name
+- `targetField` (String, required) - Target field name
+- `transformType` (String, required) - Transformation type (e.g., "map", "aggregate", "filter")
+
+#### ValidationConfig
+- `name` (String, required) - Validation rule identifier
+- `field` (String, required) - Field to validate
+- `ruleType` (String, required) - Validation rule type (e.g., "not_null", "range", "pattern")
+- `ruleValue` (String, optional) - Expected value or range (depends on ruleType)
+
+#### LoggingConfig
+- `logFilePath` (String, optional) - Path to log file (default: "./etl.log")
+- `logLevel` (String, optional) - Log level (default: "INFO")
 
 **Validation Rules**:
-- `name` must be unique across all sources
-- `name` must match regex: `^[a-zA-Z0-9_]+$`
-- `type` must be a recognized source type
-- `connectionString` must be non-empty
-- If `credentials` provided, must be valid for source type
+- At least one source and one target must be configured
+- All connection strings must be non-empty
+- Primary key fields must be specified for all sources
+
+**Source**: FR-008, FR-012, FR-026, Key Entities section
 
 ---
 
-### 3. TargetConfig
+### 3. ETLContext
 
-**Purpose**: Configuration for a single data target.
-
-**Package**: `com.sdd.etl.config`
+**Description**: Runtime context containing state for a single day's ETL process. All data transfer between subprocesses occurs through this context.
 
 **Fields**:
-| Field | Type | Description | Validation |
-|-------|------|-------------|------------|
-| name | String | Unique identifier for this target | Required, alphanumeric + underscore |
-| type | String | Target type (e.g., "database", "file", "api") | Required |
-| connectionString | String | Connection string or URI | Required |
-| credentials | Credentials | Authentication credentials | Optional (anonymous targets) |
-| additionalProperties | Map<String, String> | Additional target-specific properties | Optional |
+- `currentDate` (String, required) - Processing date in YYYYMMDD format
+- `currentSubprocess` (SubprocessType, required) - Currently executing subprocess
+- `config` (ETConfiguration, required) - Reference to configuration for this day
+- `extractedDataCount` (int) - Count of records extracted from all sources
+- `extractedData` (Object) - Actual extracted data objects (List<SourceDataModel> or Map<String, Object>)
+- `transformedDataCount` (int) - Count of records transformed
+- `transformedData` (Object) - Actual transformed data objects (List<TargetDataModel> or Map<String, Object>)
+- `loadedDataCount` (int) - Count of records loaded to all targets
+- `validationPassed` (boolean) - Validation result (true if all rules pass)
+- `validationErrors` (List<String>) - Validation error messages (if any)
+- `cleanupPerformed` (boolean) - Whether cleanup subprocess has executed
 
-**State Transitions**: Immutable (loaded from INI file)
+**Enum**: SubprocessType
+- `EXTRACT`
+- `TRANSFORM`
+- `LOAD`
+- `VALIDATE`
+- `CLEAN`
 
 **Validation Rules**:
-- `name` must be unique across all targets
-- `name` must match regex: `^[a-zA-Z0-9_]+$`
-- `type` must be a recognized target type
-- `connectionString` must be non-empty
-- If `credentials` provided, must be valid for target type
+- `currentDate` must be valid date format (YYYYMMDD)
+- `config` must not be null
+- `extractedDataCount`, `transformedDataCount`, `loadedDataCount` must be ≥ 0
+- `extractedData` must be null before Extract, non-null after Extract (if count > 0)
+- `transformedData` must be null before Transform, non-null after Transform (if count > 0)
+- `validationPassed` is false if `validationErrors` is non-empty
+
+**Data Flow** (per FR-028 through FR-031):
+1. **Before Extract**: All counts = 0, `extractedData` = null, `transformedData` = null, `validationPassed` = false, `cleanupPerformed` = false
+2. **After Extract**: `extractedData` and `extractedDataCount` set, `currentSubprocess` = TRANSFORM
+3. **After Transform**: `transformedData` and `transformedDataCount` set, `currentSubprocess` = LOAD
+4. **After Load**: `loadedDataCount` set, `currentSubprocess` = VALIDATE
+5. **After Validate**: `validationPassed` and `validationErrors` set, `currentSubprocess` = CLEAN
+6. **After Clean**: `cleanupPerformed` = true, process complete
+
+**Source**: FR-014 through FR-031, Key Entities section
 
 ---
 
-### 4. Credentials
+### 4. SubprocessResult
 
-**Purpose**: Stores authentication credentials for data sources or targets.
-
-**Package**: `com.sdd.etl.config`
+**Description**: Result returned by each subprocess execution.
 
 **Fields**:
-| Field | Type | Description | Validation |
-|-------|------|-------------|------------|
-| username | String | Username for authentication | Optional |
-| password | String | Password for authentication | Optional (may use token) |
-| token | String | Authentication token (alternative to username/password) | Optional |
-| additionalAuthFields | Map<String, String> | Additional authentication parameters | Optional |
-
-**State Transitions**: Immutable
+- `success` (boolean, required) - True if subprocess completed successfully
+- `dataCount` (int) - Number of records processed (depends on subprocess type)
+- `errorMessage` (String) - Error message if subprocess failed
+- `timestamp` (long) - Execution timestamp (milliseconds since epoch)
 
 **Validation Rules**:
-- Either (`username` + `password`) OR `token` must be provided
-- Cannot have both `password` and `token` simultaneously
+- `dataCount` must be ≥ 0 if `success` is true
+- `errorMessage` must be non-empty if `success` is false
+- `errorMessage` must be null if `success` is true
+
+**Source**: FR-005, FR-006, FR-007
 
 ---
 
-### 5. TransformConfig
+### 5. DailyProcessResult
 
-**Purpose**: Configuration for data transformation rules.
-
-**Package**: `com.sdd.etl.config`
+**Description**: Result of processing a single day's ETL workflow.
 
 **Fields**:
-| Field | Type | Description | Validation |
-|-------|------|-------------|------------|
-| sourceName | String | Name of the source this transform applies to | Required, must match existing source |
-| targetName | String | Name of the target this transform applies to | Required, must match existing target |
-| fieldMappings | Map<String, String> | Source field to target field mappings | Required |
-| filters | List<FilterConfig> | Data filtering rules | Optional |
-
-**State Transitions**: Immutable
+- `date` (String, required) - Processing date in YYYYMMDD format
+- `success` (boolean, required) - True if all subprocesses completed successfully
+- `extractResult` (SubprocessResult) - Extract subprocess result
+- `transformResult` (SubprocessResult) - Transform subprocess result
+- `loadResult` (SubprocessResult) - Load subprocess result
+- `validateResult` (SubprocessResult) - Validate subprocess result
+- `cleanResult` (SubprocessResult) - Clean subprocess result
+- `context` (ETLContext) - Final context state (for debugging)
 
 **Validation Rules**:
-- `sourceName` must exist in `Configuration.sources`
-- `targetName` must exist in `Configuration.targets`
-- `fieldMappings` cannot be empty
+- `success` is true only if all subprocess results have `success` = true
+- All subprocess results must be non-null
+- `context` must reflect final state (after all subprocesses)
+
+**Source**: FR-004, FR-007, Key Entities section
 
 ---
 
-### 6. FilterConfig
+### 6. WorkflowResult
 
-**Purpose**: Configuration for data filtering rules.
-
-**Package**: `com.sdd.etl.config`
+**Description**: Result of processing the entire multi-day ETL workflow.
 
 **Fields**:
-| Field | Type | Description | Validation |
-|-------|------|-------------|------------|
-| fieldName | String | Field name to filter on | Required |
-| operator | String | Comparison operator (eq, ne, gt, lt, ge, le, contains) | Required |
-| value | String | Value to compare against | Required |
-
-**State Transitions**: Immutable
+- `success` (boolean, required) - True if all days completed successfully
+- `processedDays` (int, required) - Number of days processed
+- `successfulDays` (int) - Number of successful days
+- `failedDays` (int) - Number of failed days
+- `dailyResults` (Map<String, DailyProcessResult>) - Result per date (key: YYYYMMDD)
+- `startDate` (String) - First processed date
+- `endDate` (String) - Last processed date
 
 **Validation Rules**:
-- `operator` must be one of: "eq", "ne", "gt", "lt", "ge", "le", "contains"
+- `processedDays` = `successfulDays` + `failedDays`
+- `success` is true only if `failedDays` = 0
+- `dailyResults` keys are in ascending date order
+
+**Source**: FR-004, Success Criteria section
 
 ---
 
-### 7. ValidationConfig
+### 7. StatusLogEntry
 
-**Purpose**: Configuration for data validation rules.
-
-**Package**: `com.sdd.etl.config`
+**Description**: Single log entry for status updates to file and console.
 
 **Fields**:
-| Field | Type | Description | Validation |
-|-------|------|-------------|------------|
-| checkCompleteness | boolean | Whether to check for missing required fields | Required, default true |
-| checkQuality | boolean | Whether to perform data quality checks | Required, default true |
-| checkConsistency | boolean | Whether to check for data consistency | Required, default true |
-| completenessRules | List<String> | Field names that must be non-null | Optional |
-| qualityRules | Map<String, String> | Field name to validation pattern regex | Optional |
+- `timestamp` (String, required) - ISO 8601 timestamp
+- `date` (String) - Processing date (YYYYMMDD)
+- `subprocess` (SubprocessType) - Subprocess being logged
+- `level` (LogLevel) - Log level (INFO, WARN, ERROR)
+- `message` (String, required) - Log message
+- `dataCount` (int) - Optional data count for subprocess completion
 
-**State Transitions**: Immutable
-
-**Validation Rules**:
-- If `checkCompleteness` is true, `completenessRules` cannot be empty (all fields required)
-- If `checkQuality` is true, `qualityRules` cannot be empty
-
----
-
-### 8. LoggingConfig
-
-**Purpose**: Configuration for logging settings.
-
-**Package**: `com.sdd.etl.config`
-
-**Fields**:
-| Field | Type | Description | Validation |
-|-------|------|-------------|------------|
-| logDirectory | String | Directory for log files | Required, must be valid path |
-| consoleLogging | boolean | Whether to log to console | Required, default true |
-| fileLogging | boolean | Whether to log to file | Required, default true |
-| logLevel | String | Logging level (DEBUG, INFO, WARN, ERROR) | Required, default INFO |
-
-**State Transitions**: Immutable
+**Enum**: LogLevel
+- `INFO`
+- `WARN`
+- `ERROR`
 
 **Validation Rules**:
-- `logDirectory` must be a valid directory path
-- `logLevel` must be one of: "DEBUG", "INFO", "WARN", "ERROR"
+- `timestamp` must be valid ISO 8601 format
+- `message` must be non-empty
+- `dataCount` is only valid when `level` is INFO
+
+**Source**: FR-016, FR-017, User Story 6
 
 ---
 
-### 9. DailyProcessContext
+### 8. SourceDataModel (API Definition Only)
 
-**Purpose**: Concrete implementation of context that holds runtime state for each day's ETL process.
+**Description**: Abstract base class representing data structure from various sources.
 
-**Package**: `com.sdd.etl.context`
+**Fields** (protected):
+- `metadata` (Map<String, Object>) - Metadata about data fields and types
+- `records` (List<Map<String, Object>>) - Data records with field-value pairs
 
-**Fields**:
-| Field | Type | Description | Validation |
-|-------|------|-------------|------------|
-| date | LocalDate | The date being processed | Required |
-| currentSubprocess | SubprocessType | Current subprocess being executed | Required, initial value is NOT_STARTED |
-| recordsExtracted | int | Count of records extracted from sources | Required, initial value 0 |
-| recordsTransformed | int | Count of records transformed | Required, initial value 0 |
-| recordsLoaded | int | Count of records loaded to targets | Required, initial value 0 |
-| configuration | Configuration | The configuration for the ETL process | Required |
-| startTime | LocalDateTime | Process start time | Required |
-| endTime | LocalDateTime | Process end time (null if not completed) | Optional |
-| extractedData | List<SourceDataModel> | Data extracted by Extract subprocess (stored for Transform) | Optional, populated by Extract |
-| transformedData | List<TargetDataModel> | Data transformed by Transform subprocess (stored for Load) | Optional, populated by Transform |
-| tempFiles | List<Path> | Temporary files created during execution (for cleanup) | Optional, populated by Extract/Transform/Load |
+**Abstract Methods**:
+- `validate()` (boolean) - Validate data integrity and completeness
+- `getPrimaryKey()` (Object) - Get primary key value for this record
 
-**State Transitions**:
-- **Created**: Context created with date, config, startTime; currentSubprocess = NOT_STARTED
-- **Extract**: currentSubprocess = EXTRACT; recordsExtracted updated; extractedData populated with SourceDataModel list
-- **Transform**: currentSubprocess = TRANSFORM; recordsTransformed updated; transformedData populated with TargetDataModel list (read from extractedData)
-- **Load**: currentSubprocess = LOAD; recordsLoaded updated (uses transformedData)
-- **Validate**: currentSubprocess = VALIDATE (reads recordsLoaded from context)
-- **Clean**: currentSubprocess = CLEAN (uses tempFiles to clean up)
-- **Completed**: currentSubprocess = COMPLETED; endTime set
+**Subclasses** (to be implemented in future phases):
+- `DatabaseSourceData` - Database-specific data model
+- `APISourceData` - API-specific data model
+- `FileSourceData` - File-specific data model
 
-**IMPORTANT**: All data transfer between subprocesses MUST occur through DailyProcessContext:
-- Extract stores data in `extractedData` field
-- Transform reads from `extractedData`, stores in `transformedData`
-- Load reads from `transformedData`, updates `recordsLoaded`
-- Validate reads `recordsLoaded` for validation
-- Clean reads `tempFiles` for cleanup
-
-No subprocess should store data externally or access another subprocess's data directly.
-
-**Builder Pattern**:
-```java
-DailyProcessContext context = DailyProcessContext.builder()
-    .date(LocalDate.of(2025, 1, 1))
-    .configuration(config)
-    .startTime(LocalDateTime.now())
-    .build();
-
-DailyProcessContext updated = DailyProcessContext.builder(context)
-    .currentSubprocess(SubprocessType.TRANSFORM)
-    .recordsExtracted(1000)
-    .build();
-```
-
-**Validation Rules**:
-- `date` cannot be null
-- `configuration` cannot be null
-- `startTime` cannot be null
-- Record counts must be non-negative
-- `recordsTransformed` <= `recordsExtracted`
-- `recordsLoaded` <= `recordsTransformed`
+**Source**: FR-018, FR-020, Key Entities section
 
 ---
 
-## Enums
+### 9. TargetDataModel (API Definition Only)
 
-### SubprocessType
+**Description**: Abstract base class representing data structure for target systems.
 
-**Purpose**: Enumerates subprocess types in the ETL workflow.
+**Fields** (protected):
+- `metadata` (Map<String, Object>) - Metadata about data fields and types
+- `records` (List<Map<String, Object>>) - Data records formatted for target
 
-**Package**: `com.sdd.etl.enums`
+**Abstract Methods**:
+- `validate()` (boolean) - Validate data integrity for target system
+- `toTargetFormat()` (Object) - Convert to target-specific format
 
-**Values**:
-| Value | Description |
-|-------|-------------|
-| NOT_STARTED | Process has not started |
-| EXTRACT | Extract subprocess |
-| TRANSFORM | Transform subprocess |
-| LOAD | Load subprocess |
-| VALIDATE | Validate subprocess |
-| CLEAN | Clean subprocess |
-| COMPLETED | All subprocesses completed successfully |
-| FAILED | Process failed |
+**Subclasses** (to be implemented in future phases):
+- `DatabaseTargetData` - Database-specific data model
+- `APITargetData` - API-specific data model
+- `FileTargetData` - File-specific data model
 
----
-
-## API Definitions (Abstract Models)
-
-### 10. SourceDataModel (API Only)
-
-**Purpose**: Abstract API representing the structure of data from various sources. Concrete implementations will extend this model according to real data structure.
-
-**Package**: `com.sdd.etl.api.model`
-
-**Methods** (to be implemented by concrete subclasses):
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| getMetadata | `Map<String, Object> getMetadata()` | Returns metadata about data fields and types |
-| getPrimaryKey | `Object getPrimaryKey()` | Returns primary key value for this record |
-| getSourceName | `String getSourceName()` | Returns name of source system |
-| getField | `Object getField(String fieldName)` | Returns value of a specific field |
-| getFields | `Map<String, Object> getFields()` | Returns all field values |
-
-**Validation Rules**:
-- `getPrimaryKey()` must return non-null value
-- `getSourceName()` must match a configured source name
+**Source**: FR-019, FR-021, Key Entities section
 
 ---
 
-### 11. TargetDataModel (API Only)
-
-**Purpose**: Abstract API representing the structure of data in target systems. Concrete implementations will extend this model according to real data structure.
-
-**Package**: `com.sdd.etl.api.model`
-
-**Methods** (to be implemented by concrete subclasses):
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| getMetadata | `Map<String, Object> getMetadata()` | Returns metadata about data fields and types |
-| setField | `void setField(String fieldName, Object value)` | Sets value of a specific field |
-| getFields | `Map<String, Object> getFields()` | Returns all field values |
-| getTargetName | `String getTargetName()` | Returns name of target system |
-| validate | `boolean validate(ValidationConfig config)` | Validates data against target constraints |
-
-**Validation Rules**:
-- `setField()` must enforce target-specific constraints
-- `getTargetName()` must match a configured target name
-
----
-
-## Relationships
+## Entity Relationships
 
 ```
-Configuration (1)
-├── SourceConfig (1..*)
-│   └── Credentials (0..1)
-├── TargetConfig (1..*)
-│   └── Credentials (0..1)
-├── TransformConfig (0..*)
-│   ├── references SourceConfig (1)
-│   ├── references TargetConfig (1)
-│   └── FilterConfig (0..*)
-├── ValidationConfig (1)
-│   ├── CompletenessRules (0..*)
-│   └── QualityRules (0..*)
-└── LoggingConfig (1)
-
-DailyProcessContext (many, one per day)
-├── references Configuration (1)
-├── references extractedData (List<SourceDataModel>, populated by Extract)
-├── references transformedData (List<TargetDataModel>, populated by Transform)
-├── references tempFiles (List<Path>, populated by Extract/Transform/Load)
-└── uses SubprocessType (1 at a time)
-
-SourceDataModel (API)
-└── implemented by concrete source data models
-
-TargetDataModel (API)
-└── implemented by concrete target data models
+CommandLineArguments
+    │
+    ├─> ETConfiguration (loaded from configPath)
+    │
+    └─> WorkflowResult (generated after processing)
+            │
+            └─> DailyProcessResult (per date)
+                    │
+                    ├─> ETLContext (shared state)
+                    │
+                    ├─> SubprocessResult (per subprocess: extract, transform, load, validate, clean)
+                    │
+                    └─> StatusLogEntry (per subprocess completion)
 ```
 
-## INI File Structure (Configuration Source)
+**Data Flow**:
+1. User provides `CommandLineArguments`
+2. System loads `ETConfiguration` from INI file
+3. For each date in range:
+   - Create `ETLContext` for the date
+   - Execute subprocesses sequentially
+   - Each subprocess returns `SubprocessResult` and updates `ETLContext`
+   - Log `StatusLogEntry` for each subprocess
+   - Aggregate into `DailyProcessResult`
+4. Aggregate all `DailyProcessResult` into `WorkflowResult`
 
-```ini
-[sources]
-count=3
+---
 
-[source.0]
-name=source_database
-type=database
-connectionString=jdbc:postgresql://localhost:5432/sourcedb
-credentials.username=etl_user
-credentials.password=secure_password
-primaryKeyField=id
+## State Transitions
 
-[source.1]
-name=source_api
-type=api
-connectionString=https://api.example.com/data
-credentials.token=api_key_12345
-primaryKeyField=record_id
+### ETLContext State Machine
 
-[source.2]
-name=source_file
-type=file
-connectionString=/data/input/file.csv
-primaryKeyField=row_id
-
-[targets]
-count=2
-
-[target.0]
-name=target_warehouse
-type=database
-connectionString=jdbc:mysql://localhost:3306/warehouse
-credentials.username=etl_user
-credentials.password=secure_password
-
-[target.1]
-name=target_archive
-type=file
-connectionString=/data/output/archive.csv
-
-[transforms]
-count=2
-
-[transform.0]
-sourceName=source_database
-targetName=target_warehouse
-
-[transform.0.fieldMapping]
-source_field1=target_field1
-source_field2=target_field2
-
-[transform.0.filter]
-0.fieldName=source_field1
-0.operator=eq
-0.value=active
-
-[transform.1]
-sourceName=source_api
-targetName=target_archive
-
-[transform.1.fieldMapping]
-record_id=archive_id
-data=archive_data
-
-[validation]
-checkCompleteness=true
-checkQuality=true
-checkConsistency=true
-completenessRules=id,name,timestamp
-qualityRules.id=^[0-9]+$
-qualityRules.name=^[a-zA-Z ]+$
-
-[logging]
-logDirectory=./logs
-consoleLogging=true
-fileLogging=true
-logLevel=INFO
+```
+[Initial]
+  │
+  ├─> Extract Subprocess
+  │     ├─> Success → [Extracted] (extractedData and extractedDataCount set)
+  │     └─> Fail → [Error State] (stop day's process)
+  │
+  ├─> Transform Subprocess (only if Extract success)
+  │     ├─> Success → [Transformed] (transformedData and transformedDataCount set)
+  │     └─> Fail → [Error State] (stop day's process)
+  │
+  ├─> Load Subprocess (only if Transform success)
+  │     ├─> Success → [Loaded] (loadedDataCount set)
+  │     └─> Fail → [Error State] (stop day's process)
+  │
+  ├─> Validate Subprocess (only if Load success)
+  │     ├─> Success → [Validated] (validationPassed = true)
+  │     └─> Fail → [Error State] (stop day's process)
+  │
+  ├─> Clean Subprocess (only if Validate success)
+  │     ├─> Success → [Complete] (cleanupPerformed = true)
+  │     └─> Fail → [Error State] (stop day's process)
+  │
+  └─> [Error State] (any subprocess fails)
+        └─> Stop day's process, do not proceed to next day
 ```
 
-## Summary
+**Rules** (from FR-006, FR-007):
+- Each subprocess must complete successfully before next subprocess starts
+- If any subprocess fails, stop the day's process immediately
+- Day's process is complete only when all 5 subprocesses complete successfully
 
-This data model provides:
-- Concrete implementations for Configuration and DailyProcessContext
-- API definitions (not implementations) for SourceDataModel and TargetDataModel
-- Clear entity relationships and validation rules
-- Immutable design for thread safety
-- Builder pattern for flexible context construction
-- **Context-based data transfer** between subprocesses (critical requirement)
+---
 
-All models align with:
-- Java 8 compatibility
-- INI configuration format
-- Component boundary clarity
-- Single-process execution constraints
-- Subprocess data transfer through DailyProcessContext
+## Edge Cases Handling
+
+### 1. Empty Data Scenario
+
+- **When**: A subprocess completes but produces no data (dataCount = 0)
+- **Handling**: Consider as success unless validation rules require non-zero data
+- **Logging**: Log warning message "No data extracted/transformed/loaded"
+- **Source**: Edge Cases in spec
+
+### 2. Context Integrity
+
+- **When**: Context data is corrupted or contains invalid values
+- **Handling**: Validate context before each subprocess execution; throw exception if invalid
+- **Recovery**: Process stops, user must investigate and restart manually
+- **Source**: Edge Cases in spec, FR-025
+
+### 3. Concurrent Execution Detection
+
+- **When**: Another ETL process is already running
+- **Handling**: Detect file lock, display error message "Another ETL process is running. Please wait for it to complete.", exit with error code
+- **Source**: Edge Cases in spec, FR-024
+
+---
+
+## Data Model Completeness
+
+All entities defined in the Key Entities section of the feature specification have been modeled:
+- ✅ Configuration
+- ✅ Source Data (API only in this phase)
+- ✅ Target Data (API only in this phase)
+- ✅ Context
+- ✅ Subprocess Component (via SubprocessResult)
+- ✅ Day Process (via DailyProcessResult)
+
+Additional entities added to support:
+- CLI argument parsing and validation
+- Multi-day workflow orchestration
+- Status logging
+- Error handling and recovery
+
+---
+
+## Implementation Scope (This Phase)
+
+**Concrete Implementations** (Required):
+- CommandLineArguments
+- ETConfiguration
+- ETLContext
+- SubprocessResult
+- DailyProcessResult
+- WorkflowResult
+- StatusLogEntry
+
+**API Definitions Only** (No implementation):
+- SourceDataModel (abstract class with methods)
+- TargetDataModel (abstract class with methods)
+
+**Source**: docs/v1/Plan.md scope definition
