@@ -12,6 +12,12 @@ In this phase, we will focus on the API, Data Model, CLI interface and work flow
 
     - `--config`: a path to the configuration file, which contains the source, target and transform configuration.
 
+2. 1 command is required to supported by the tool:
+
+    - `--help`: print the help message.
+
+3. All user input must be validated.
+
 ## II. Work Flow
 
 1. The ETL process, including extract, transform and load, **MUST** be executed day by day, starting from the `--from` date(included), and ending at the `--to` date(included). Every day is a separate and complete process executed in sequence.
