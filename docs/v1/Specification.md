@@ -2,6 +2,8 @@ This project will build a ETL tool, which help you to extract data from differen
 
 In this phase, we will focus on the API, Data Model, CLI interface and work flow design ONLY. **No concrete implementation** is required at this phase, **EXCEPT** the work flow.
 
+## Phase 1: API/Data Model Design
+
 ## I. CLI Interface
 
 1. 3 parameters are required to start the tool:
