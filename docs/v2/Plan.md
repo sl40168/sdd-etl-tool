@@ -26,7 +26,7 @@ What we need to do in this phase include:
     - Bucket
     - Certification
 4. Except `BUSINESS_DATE`, COS needs an additional information `CATEGORY`, which will be provided by concrete extractors, to filter source data.
-5. The filter condition of COS is `/CATEGORY/BUSINESS_DATE`, but **NOTE** the format of `BUSINESS_DATE` may be different in concrete extractors.
+5. The filter condition of COS is `/CATEGORY/BUSINESS_DATE/*.csv`, but **NOTE** the format of `BUSINESS_DATE` may be different in concrete extractors.
 6. The `LOCAL_STORAGE` is `/BUSINESS_DATE/CATEGORY` for any concrete extractor, and the format of `BUSINESS_DATE` **MUST** be `YYYYMMDD`
 
 ## III. Provide a concrete implementation for **Xbond Quote** Data Source
