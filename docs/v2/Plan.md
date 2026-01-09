@@ -149,3 +149,8 @@ The fields not mentioned **MUST** be created but keep null.
      - If `underlying_md_entry_type` = 1 and `underlying_md_price_level` = 6, then `underlying_md_entry_px`->`offer_5_price`, `underlying_yield`->`offer_5_yield`, `underlying_yield_type`->`offer_5_yield_type` and `underlying_md_entry_size`->`offer_5_tradable_volume`
      - ......
 
+## Reference Documents
+
+Document regarding Tencent COS **FOR YOUR INFORMATION**
+- https://doc.fincloud.tencent.cn/tcloud/Storage/COS/402191/876795/java_qstart
+- https://doc.fincloud.tencent.cn/tcloud/Storage/COS/402191/876795/java_ifd

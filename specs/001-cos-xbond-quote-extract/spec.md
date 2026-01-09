@@ -105,7 +105,7 @@ As a data engineer running an ETL job with multiple configured sources, I need t
 
 ## Success Criteria *(mandatory)*
 
-### Measurable Outcomes
+### Measurable Outcomes、
 
 - **SC-001**: For a given run date, the system consistently extracts all available matching COS files and produces a consolidated output set without manual intervention.
 - **SC-002**: When no matching files exist for a run date, the ETL job completes extraction successfully and produces an empty output set.

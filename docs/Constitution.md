@@ -16,3 +16,4 @@ This is a ETL CLI Tool which can help you to extract data from different data so
     - `./specify/scripts/*.*`
     - `./specify/templates/*.*`
     - `./codebuddy`
+11. For all fields of primitive number type, such as int, double, long, and so on, **DO NOT** use default value such as 0 to initialize. User can not know whether it's a real 0 or just not be set yet.
