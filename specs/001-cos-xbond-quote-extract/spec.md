@@ -81,17 +81,17 @@ As a data engineer running an ETL job with multiple configured sources, I need t
 - **FR-002**: The Extractor API MUST allow an extractor to apply filtering based on information provided by the ETL run context, including evaluating configured selection criteria.
 - **FR-003**: The system MUST support extracting Xbond Quote data from COS by selecting files using a configured match rule/template evaluated with context values (e.g., target date).
 - **FR-004**: The system MUST retrieve the selected COS files into a local working area for processing during the run.
-- **FR-004a**: If any selected file cannot be downloaded, the system MUST fail the day’s extraction with a clear error message.
+- **FR-004a**: If any selected file cannot be downloaded, the system MUST fail the day’s extraction with a structured error message including file name, download failure reason, and timestamp.
 - **FR-005**: The system MUST parse each selected file into in-memory raw records suitable for conversion and filter records to the target date based on context when files contain mixed dates.
-- **FR-005a**: If a selected file is too large to process safely, the system MUST fail the day’s extraction with a clear error message (and must not crash).
+- **FR-005a**: If a selected file exceeds 100MB (configurable threshold), the system MUST fail the day’s extraction with a structured error message including file name, size, and safe processing limit (and must not crash).
 - **FR-006**: The system MUST convert the combined raw records into a set of `SourceDataModel` records as the extraction output.
 - **FR-007**: The system MUST return the converted `SourceDataModel` set as the extraction output for downstream ETL steps.
-- **FR-008**: Data extraction MUST be executed within the ETL extraction subprocess.
-- **FR-009**: The extraction subprocess MUST support multiple extractors configured for the run and execute them concurrently.
-- **FR-010**: The extraction subprocess MUST consolidate records from all configured extractors into a single logical output without de-duplicating records.
-- **FR-011**: The extraction subprocess MUST be considered complete ONLY when all configured extractors have completed successfully.
-- **FR-012**: If any configured extractor fails, the extraction subprocess MUST be marked failed for that day and MUST NOT be treated as complete.
-- **FR-013**: The system MUST provide clear operational logs that indicate: selected file count, extracted record count, and any extraction errors.
+- **FR-008**: Data extraction MUST be executed within the ETL ExtractSubprocess.
+- **FR-009**: The ExtractSubprocess MUST support multiple extractors configured for the run and execute them concurrently.
+- **FR-010**: The ExtractSubprocess MUST consolidate records from all configured extractors into a single logical output without de-duplicating records.
+- **FR-011**: The ExtractSubprocess MUST be considered complete ONLY when all configured extractors have completed successfully.
+- **FR-012**: If any configured extractor fails, the ExtractSubprocess MUST be marked failed for that day and MUST NOT be treated as complete.
+- **FR-013**: The system MUST provide structured JSON operational logs that include: timestamp, log level, category, selected file count, extracted record count, error details (if any), and processing duration.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -101,7 +101,7 @@ As a data engineer running an ETL job with multiple configured sources, I need t
 - **Context Filter Criteria**: The set of filter inputs derived from the ETL run context (e.g., target date) used to select relevant files/records.
 - **Raw Record**: A parsed representation of a single file’s contents prior to conversion into the standard output model.
 - **SourceDataModel Record**: The standardized record format produced by extractors and consumed by downstream ETL steps.
-- **Extraction Output Set**: The consolidated set of `SourceDataModel` records produced by the extraction subprocess.
+- **Extraction Output Set**: The consolidated set of `SourceDataModel` records produced by the ExtractSubprocess.
 
 ## Success Criteria *(mandatory)*
 
@@ -110,7 +110,7 @@ As a data engineer running an ETL job with multiple configured sources, I need t
 - **SC-001**: For a given run date, the system consistently extracts all available matching COS files and produces a consolidated output set without manual intervention.
 - **SC-002**: When no matching files exist for a run date, the ETL job completes extraction successfully and produces an empty output set.
 - **SC-003**: When an extractor encounters an unrecoverable error (e.g., file cannot be retrieved or parsed), the day’s extraction is marked failed and downstream steps are not executed for that day.
-- **SC-004**: For a typical daily workload, extraction completes within an agreed operational time window defined by the owning team (recorded in run documentation).
+- **SC-004**: For a typical daily workload, extraction completes within 30 minutes (configurable target). Performance metrics including extraction duration, file count, record count, and success/failure status MUST be recorded in structured operational logs.
 
 ## Assumptions *(optional)*
 
