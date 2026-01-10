@@ -1,7 +1,9 @@
 package com.sdd.etl.config;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Configuration loaded from INI file containing all ETL process settings.
@@ -52,6 +54,48 @@ public class ETConfiguration {
      */
     public void setSources(List<SourceConfig> sources) {
         this.sources = sources;
+    }
+
+    /**
+     * Finds the first source configuration matching the given type.
+     *
+     * @param type source type to match (e.g., "cos")
+     * @return matching source configuration, or null if not found
+     */
+    public SourceConfig findSourceConfig(String type) {
+        if (sources == null) {
+            return null;
+        }
+        for (SourceConfig source : sources) {
+            if (source != null && type.equals(source.getType())) {
+                return source;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Finds a source configuration matching both type and category property.
+     * The category is expected to be stored in the configuration's properties
+     * map under the key "category".
+     *
+     * @param type source type to match (e.g., "cos")
+     * @param category category value to match (e.g., "AllPriceDepth")
+     * @return matching source configuration, or null if not found
+     */
+    public SourceConfig findSourceConfigByCategory(String type, String category) {
+        if (sources == null || category == null) {
+            return null;
+        }
+        for (SourceConfig source : sources) {
+            if (source != null && type.equals(source.getType())) {
+                String configCategory = source.getProperty("category");
+                if (category.equals(configCategory)) {
+                    return source;
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -172,6 +216,7 @@ public class ETConfiguration {
         private String primaryKeyField;
         private String extractQuery;
         private String dateField;
+        private Map<String, String> properties;
 
         /**
          * Gets the source name.
@@ -282,6 +327,13 @@ public class ETConfiguration {
         }
 
         /**
+         * Constructs a new SourceConfig with default values.
+         */
+        public SourceConfig() {
+            this.properties = new HashMap<>();
+        }
+
+        /**
          * Validates that required fields are present.
          * Required: name, type, connectionString, primaryKeyField.
          *
@@ -292,6 +344,54 @@ public class ETConfiguration {
                     && ETConfiguration.isNonEmpty(type)
                     && ETConfiguration.isNonEmpty(connectionString)
                     && ETConfiguration.isNonEmpty(primaryKeyField);
+        }
+
+        /**
+         * Gets the properties map for this source configuration.
+         *
+         * @return properties map (never null)
+         */
+        public Map<String, String> getProperties() {
+            return properties;
+        }
+
+        /**
+         * Sets the properties map for this source configuration.
+         *
+         * @param properties properties map
+         */
+        public void setProperties(Map<String, String> properties) {
+            this.properties = properties;
+        }
+
+        /**
+         * Gets a property value by key.
+         *
+         * @param key property key
+         * @return property value or null if not found
+         */
+        public String getProperty(String key) {
+            return properties.get(key);
+        }
+
+        /**
+         * Sets a property value.
+         *
+         * @param key property key
+         * @param value property value
+         */
+        public void setProperty(String key, String value) {
+            properties.put(key, value);
+        }
+
+        /**
+         * Checks if a property exists.
+         *
+         * @param key property key
+         * @return true if property exists
+         */
+        public boolean hasProperty(String key) {
+            return properties.containsKey(key);
         }
     }
 
@@ -605,4 +705,6 @@ public class ETConfiguration {
             this.logLevel = logLevel;
         }
     }
+
+    public static final String SOURCE_TYPE_COS = "cos";
 }

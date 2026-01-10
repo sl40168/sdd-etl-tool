@@ -465,6 +465,108 @@ Run the complete build and test cycle:
 ./mvnw package
 ```
 
+## Step 14: Multi-Source Concurrent Extraction
+
+The enhanced `ExtractSubprocess` now supports concurrent extraction from multiple data sources. The implementation includes:
+
+1. **MultiSourceExtractSubprocess** - Inner class that manages concurrent execution
+2. **ExecutorService-based parallel extraction** - Uses thread pool for performance
+3. **Result consolidation and error handling** - Graceful handling of partial failures
+
+### Concurrent Extraction Implementation
+
+The `MultiSourceExtractSubprocess` inner class in `ExtractSubprocess.java` provides concurrent execution:
+
+```java
+// MultiSourceExtractSubprocess inner class in ExtractSubprocess.java
+public static class MultiSourceExtractSubprocess extends ExtractSubprocess {
+    @Override
+    public int execute(ETLContext context) throws ETLException {
+        List<Extractor> extractors = createExtractors(context);
+        
+        // Create thread pool sized to number of extractors
+        ExecutorService executor = Executors.newFixedThreadPool(extractors.size());
+        List<Future<List<SourceDataModel>>> futures = new ArrayList<>();
+        
+        // Submit all extraction tasks
+        for (Extractor extractor : extractors) {
+            futures.add(executor.submit(() -> extractor.extract(context)));
+        }
+        
+        // Collect results and handle errors
+        List<SourceDataModel> allRecords = new ArrayList<>();
+        int successfulExtractors = 0;
+        List<Exception> errors = new ArrayList<>();
+        
+        for (int i = 0; i < futures.size(); i++) {
+            try {
+                List<SourceDataModel> records = futures.get(i).get();
+                allRecords.addAll(records);
+                successfulExtractors++;
+            } catch (ExecutionException e) {
+                errors.add(e);
+                // Continue processing other extractors
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new ETLException("EXTRACT", context.getCurrentDate(),
+                        "Extraction interrupted", e);
+            }
+        }
+        
+        executor.shutdown();
+        context.setExtractedData(allRecords);
+        context.setExtractedDataCount(allRecords.size());
+        
+        // If all extractors failed, throw exception
+        if (successfulExtractors == 0 && !errors.isEmpty()) {
+            throw new ETLException("EXTRACT", context.getCurrentDate(),
+                    "All extractors failed: " + errors.get(0).getMessage());
+        }
+        
+        return allRecords.size();
+    }
+}
+```
+
+### ExtractorFactory Singleton Pattern
+
+The `ExtractorFactory` uses a singleton pattern with dependency injection for testing:
+
+```java
+// ExtractorFactory.java - Singleton with test support
+public class ExtractorFactory {
+    private static ExtractorFactory INSTANCE = new ExtractorFactory();
+    
+    protected ExtractorFactory() {}
+    
+    public static void setInstance(ExtractorFactory factory) {
+        INSTANCE = factory;
+    }
+    
+    public static Extractor createExtractor(ETConfiguration.SourceConfig sourceConfig) throws ETLException {
+        return INSTANCE.createExtractorInstance(sourceConfig);
+    }
+    
+    protected Extractor createExtractorInstance(ETConfiguration.SourceConfig sourceConfig) throws ETLException {
+        // Factory logic here...
+    }
+}
+```
+
+### Integration with DailyETLWorkflow
+
+Update `DailyETLWorkflow.java` to use the enhanced extractor:
+
+```java
+// DailyETLWorkflow.java - Updated to use MultiSourceExtractSubprocess
+public class DailyETLWorkflow extends AbstractWorkflow {
+    @Override
+    protected SubprocessInterface createExtractSubprocess() {
+        return new ExtractSubprocess.MultiSourceExtractSubprocess();
+    }
+}
+```
+
 ## Troubleshooting
 
 | Issue | Solution |
