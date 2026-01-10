@@ -1,4 +1,4 @@
-## Phase IV: Extract Build **Xbond Trade** Data from COS for ETL
+## Phase IV: Extract **Xbond Trade** Data from COS for ETL
 
 This is phase III for ETL tool. In this phase, we need to extract **Xbond Trade** data from COS. COS(Cloud Object Storage) is a file system provided by Tencent, in which the files are stored in the sub directors of given bucket.
 
