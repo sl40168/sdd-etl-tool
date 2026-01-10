@@ -3,6 +3,7 @@ package com.sdd.etl.workflow;
 import com.sdd.etl.ETLException;
 import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.context.ETLContext;
+import com.sdd.etl.util.DateUtils;
 import com.sdd.etl.context.SubprocessType;
 import com.sdd.etl.logging.StatusLogger;
 import com.sdd.etl.model.DailyProcessResult;
@@ -70,7 +71,7 @@ public class DailyETLWorkflowIntegrationTest {
                     public void validateContext(ETLContext context) throws ETLException {
                         // Basic validation - context should be in initial state
                         if (context.getExtractedDataCount() != 0) {
-                            throw new ETLException("EXTRACT", context.getCurrentDate(),
+                            throw new ETLException("EXTRACT", DateUtils.formatDate(context.getCurrentDate()),
                                 "Context already has extracted data");
                         }
                     }
@@ -94,7 +95,7 @@ public class DailyETLWorkflowIntegrationTest {
                     public void validateContext(ETLContext context) throws ETLException {
                         // Validate that extract completed
                         if (context.getExtractedDataCount() == 0) {
-                            throw new ETLException("TRANSFORM", context.getCurrentDate(),
+                            throw new ETLException("TRANSFORM", DateUtils.formatDate(context.getCurrentDate()),
                                 "No data extracted to transform");
                         }
                     }
@@ -117,7 +118,7 @@ public class DailyETLWorkflowIntegrationTest {
                     public void validateContext(ETLContext context) throws ETLException {
                         // Validate that transform completed
                         if (context.getTransformedDataCount() == 0) {
-                            throw new ETLException("LOAD", context.getCurrentDate(),
+                            throw new ETLException("LOAD", DateUtils.formatDate(context.getCurrentDate()),
                                 "No data transformed to load");
                         }
                     }
@@ -140,7 +141,7 @@ public class DailyETLWorkflowIntegrationTest {
                     public void validateContext(ETLContext context) throws ETLException {
                         // Validate that load completed
                         if (context.getLoadedDataCount() == 0) {
-                            throw new ETLException("VALIDATE", context.getCurrentDate(),
+                            throw new ETLException("VALIDATE", DateUtils.formatDate(context.getCurrentDate()),
                                 "No data loaded to validate");
                         }
                     }
@@ -163,7 +164,7 @@ public class DailyETLWorkflowIntegrationTest {
                     public void validateContext(ETLContext context) throws ETLException {
                         // Validate that validation completed
                         if (!context.isValidationPassed()) {
-                            throw new ETLException("CLEAN", context.getCurrentDate(),
+                            throw new ETLException("CLEAN", DateUtils.formatDate(context.getCurrentDate()),
                                 "Validation did not pass - cannot clean");
                         }
                     }

@@ -10,6 +10,7 @@ import com.sdd.etl.model.DailyProcessResult;
 import com.sdd.etl.model.SubprocessResult;
 import com.sdd.etl.subprocess.SubprocessInterface;
 import com.sdd.etl.subprocess.ExtractSubprocess.MultiSourceExtractSubprocess;
+import com.sdd.etl.util.DateUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -105,7 +106,7 @@ public class DailyETLWorkflow {
         if (context.getExtractedDataCount() != 0 ||
             context.getTransformedDataCount() != 0 ||
             context.getLoadedDataCount() != 0) {
-            throw new ETLException("WORKFLOW", context.getCurrentDate(),
+            throw new ETLException("WORKFLOW", DateUtils.formatDate(context.getCurrentDate()),
                     "Context is not in initial state. All counters must be 0 before starting.");
         }
     }
@@ -118,7 +119,7 @@ public class DailyETLWorkflow {
      * @return ETL context for the day
      */
     protected ETLContext createContext(String date, ETConfiguration config) {
-        return ContextManager.createContext(date, config);
+        return ContextManager.createContext(DateUtils.parseDate(date), config);
     }
 
     /**

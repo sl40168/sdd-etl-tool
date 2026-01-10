@@ -4,6 +4,8 @@ import com.sdd.etl.ETLException;
 import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.context.ContextManager;
 import com.sdd.etl.context.ETLContext;
+import com.sdd.etl.util.DateUtils;
+import java.time.LocalDate;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -21,7 +23,7 @@ public class LoadSubprocessIntegrationTest {
     @Before
     public void setUp() {
         config = new ETConfiguration();
-        context = ContextManager.createContext("20250101", config);
+        context = ContextManager.createContext(DateUtils.parseDate("20250101"), config);
 
         // Provide transformed data as input to load
         context.setTransformedDataCount(30);

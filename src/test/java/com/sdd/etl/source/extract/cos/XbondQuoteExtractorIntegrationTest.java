@@ -9,6 +9,8 @@ import com.sdd.etl.source.extract.cos.model.RawQuoteRecord;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import com.sdd.etl.util.DateUtils;
+import java.time.LocalDate;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -52,7 +54,7 @@ public class XbondQuoteExtractorIntegrationTest {
         mockContext = mock(ETLContext.class);
         
         // Set up context
-        when(mockContext.getCurrentDate()).thenReturn("20250101");
+        when(mockContext.getCurrentDate()).thenReturn(DateUtils.parseDate("20250101"));
         when(mockContext.getConfig()).thenReturn(null); // No config needed for basic tests
         
         // Inject mocked CosClient into extractor for testing

@@ -2,6 +2,7 @@ package com.sdd.etl.context;
 
 import com.sdd.etl.config.ETConfiguration;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,18 +26,18 @@ public class ETLContext {
     /**
      * Gets current processing date.
      *
-     * @return date in YYYYMMDD format
+     * @return date as LocalDate object
      */
-    public String getCurrentDate() {
-        return (String) data.get(ContextConstants.CURRENT_DATE);
+    public LocalDate getCurrentDate() {
+        return (LocalDate) data.get(ContextConstants.CURRENT_DATE);
     }
 
     /**
      * Sets current processing date.
      *
-     * @param date date in YYYYMMDD format
+     * @param date date as LocalDate object
      */
-    public void setCurrentDate(String date) {
+    public void setCurrentDate(LocalDate date) {
         data.put(ContextConstants.CURRENT_DATE, date);
     }
 

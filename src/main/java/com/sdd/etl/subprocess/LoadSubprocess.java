@@ -3,6 +3,7 @@ package com.sdd.etl.subprocess;
 import com.sdd.etl.ETLException;
 import com.sdd.etl.context.ETLContext;
 import com.sdd.etl.context.SubprocessType;
+import com.sdd.etl.util.DateUtils;
 
 /**
  * Abstract base class for Load subprocess.
@@ -32,14 +33,14 @@ public abstract class LoadSubprocess implements SubprocessInterface {
         // Validation logic will be implemented in concrete classes
         // For now, ensure context has transformed data
         if (context.getTransformedData() == null) {
-            throw new ETLException("LOAD", context.getCurrentDate(),
+            throw new ETLException("LOAD", DateUtils.formatDate(context.getCurrentDate()),
                     "No transformed data found in context. Cannot load data.");
         }
 
         if (context.getConfig() == null ||
             context.getConfig().getTargets() == null ||
             context.getConfig().getTargets().isEmpty()) {
-            throw new ETLException("LOAD", context.getCurrentDate(),
+            throw new ETLException("LOAD", DateUtils.formatDate(context.getCurrentDate()),
                     "No data targets configured. At least one target is required.");
         }
     }

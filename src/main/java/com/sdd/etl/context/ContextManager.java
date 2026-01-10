@@ -2,6 +2,8 @@ package com.sdd.etl.context;
 
 import com.sdd.etl.config.ETConfiguration;
 
+import java.time.LocalDate;
+import com.sdd.etl.util.DateUtils;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,12 +16,12 @@ public class ContextManager {
     /**
      * Creates a new ETL context with date and configuration.
      *
-     * @param date   processing date in YYYYMMDD format
+     * @param date   processing date as LocalDate object
      * @param config ETL configuration object
      * @return initialized ETLContext
      * @throws IllegalArgumentException if date or config is null
      */
-    public static ETLContext createContext(String date, ETConfiguration config) {
+    public static ETLContext createContext(LocalDate date, ETConfiguration config) {
         if (date == null) {
             throw new IllegalArgumentException("Date cannot be null");
         }
@@ -59,7 +61,7 @@ public class ContextManager {
                 throw new IllegalArgumentException("Context cannot be null");
             }
 
-            if (context.getCurrentDate() == null || context.getCurrentDate().isEmpty()) {
+            if (context.getCurrentDate() == null) {
                 throw new IllegalArgumentException("Current date must be set");
             }
 
@@ -119,7 +121,7 @@ public class ContextManager {
         }
 
         com.sdd.etl.logging.ETLogger.info("=== Context State ===");
-        com.sdd.etl.logging.ETLogger.info("Date: " + context.getCurrentDate());
+        com.sdd.etl.logging.ETLogger.info("Date: " + DateUtils.formatDate(context.getCurrentDate()));
         com.sdd.etl.logging.ETLogger.info("Subprocess: " + context.getCurrentSubprocess());
         com.sdd.etl.logging.ETLogger.info("Extracted Data Count: " + context.getExtractedDataCount());
         com.sdd.etl.logging.ETLogger.info("Transformed Data Count: " + context.getTransformedDataCount());

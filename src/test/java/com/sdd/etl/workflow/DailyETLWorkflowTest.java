@@ -3,6 +3,8 @@ package com.sdd.etl.workflow;
 import com.sdd.etl.ETLException;
 import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.context.ETLContext;
+import com.sdd.etl.util.DateUtils;
+import java.time.LocalDate;
 import com.sdd.etl.context.SubprocessType;
 import com.sdd.etl.logging.StatusLogger;
 import com.sdd.etl.model.DailyProcessResult;
@@ -59,7 +61,7 @@ public class DailyETLWorkflowTest {
         
         // Create mock context
         ETLContext mockContext = mock(ETLContext.class);
-        when(mockContext.getCurrentDate()).thenReturn(date);
+        when(mockContext.getCurrentDate()).thenReturn(DateUtils.parseDate(date));
         when(mockContext.getConfig()).thenReturn(mockConfig);
         when(mockContext.getCurrentSubprocess()).thenReturn(SubprocessType.EXTRACT);
         when(mockContext.getExtractedDataCount()).thenReturn(0);
@@ -119,7 +121,7 @@ public class DailyETLWorkflowTest {
         
         // Create mock context
         ETLContext mockContext = mock(ETLContext.class);
-        when(mockContext.getCurrentDate()).thenReturn(date);
+        when(mockContext.getCurrentDate()).thenReturn(DateUtils.parseDate(date));
         when(mockContext.getConfig()).thenReturn(mockConfig);
         when(mockContext.getCurrentSubprocess()).thenReturn(SubprocessType.EXTRACT);
         when(mockContext.getExtractedDataCount()).thenReturn(0);

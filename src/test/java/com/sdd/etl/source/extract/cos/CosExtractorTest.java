@@ -3,6 +3,7 @@ package com.sdd.etl.source.extract.cos;
 import com.sdd.etl.ETLException;
 import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.context.ETLContext;
+import com.sdd.etl.util.DateUtils;
 import com.sdd.etl.model.SourceDataModel;
 import com.sdd.etl.source.extract.cos.config.CosSourceConfig;
 import com.sdd.etl.source.extract.cos.model.CosFileMetadata;
@@ -14,6 +15,7 @@ import org.mockito.InOrder;
 import java.io.File;
 import java.io.InputStream;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -131,7 +133,7 @@ public class CosExtractorTest {
         
         // Default mock behavior
         when(mockContext.getConfig()).thenReturn(mockEtConfig);
-        when(mockContext.getCurrentDate()).thenReturn("20250101");
+        when(mockContext.getCurrentDate()).thenReturn(DateUtils.parseDate("20250101"));
         
         // Setup sources list with our mock CosSourceConfig
         List<ETConfiguration.SourceConfig> sources = new ArrayList<>();

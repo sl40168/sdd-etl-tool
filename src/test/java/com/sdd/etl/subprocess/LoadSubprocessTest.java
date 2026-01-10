@@ -4,6 +4,8 @@ import com.sdd.etl.ETLException;
 import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.context.ContextManager;
 import com.sdd.etl.context.ETLContext;
+import com.sdd.etl.util.DateUtils;
+import java.time.LocalDate;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -20,7 +22,7 @@ public class LoadSubprocessTest {
     @Before
     public void setUp() {
         config = new ETConfiguration();
-        context = ContextManager.createContext("20250101", config);
+        context = ContextManager.createContext(DateUtils.parseDate("20250101"), config);
     }
 
     @Test

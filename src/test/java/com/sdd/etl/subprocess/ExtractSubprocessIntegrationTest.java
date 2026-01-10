@@ -4,6 +4,7 @@ import com.sdd.etl.ETLException;
 import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.context.ContextManager;
 import com.sdd.etl.context.ETLContext;
+import com.sdd.etl.util.DateUtils;
 import com.sdd.etl.model.SourceDataModel;
 import com.sdd.etl.source.extract.Extractor;
 import com.sdd.etl.source.extract.ExtractorFactory;
@@ -36,7 +37,7 @@ public class ExtractSubprocessIntegrationTest {
     @Before
     public void setUp() {
         config = new ETConfiguration();
-        context = ContextManager.createContext("20250101", config);
+        context = ContextManager.createContext(DateUtils.parseDate("20250101"), config);
         testFactory = new TestExtractorFactory();
         ExtractorFactory.setInstance(testFactory);
         mockExtractors = new ArrayList<>();
@@ -113,7 +114,7 @@ public class ExtractSubprocessIntegrationTest {
                     try {
                         t.join();
                     } catch (InterruptedException e) {
-                        throw new ETLException("EXTRACT", ctx.getCurrentDate(), 
+                            throw new ETLException("EXTRACT", DateUtils.formatDate(ctx.getCurrentDate()), 
                                 "Extraction interrupted");
                     }
                 }
@@ -186,7 +187,7 @@ public class ExtractSubprocessIntegrationTest {
                 
                 if (!errors.isEmpty() && successCount.get() == 0) {
                     // All extractors failed
-                    throw new ETLException("EXTRACT", ctx.getCurrentDate(),
+                    throw new ETLException("EXTRACT", DateUtils.formatDate(ctx.getCurrentDate()),
                             "All extractors failed: " + errors.get(0).getMessage());
                 }
                 
@@ -298,7 +299,7 @@ public class ExtractSubprocessIntegrationTest {
                         t.join();
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
-                        throw new ETLException("EXTRACT", ctx.getCurrentDate(), "Extraction interrupted");
+                        throw new ETLException("EXTRACT", DateUtils.formatDate(ctx.getCurrentDate()), "Extraction interrupted");
                     }
                 }
                 

@@ -3,6 +3,7 @@ package com.sdd.etl.subprocess;
 import com.sdd.etl.ETLException;
 import com.sdd.etl.context.ETLContext;
 import com.sdd.etl.context.SubprocessType;
+import com.sdd.etl.util.DateUtils;
 
 /**
  * Abstract base class for Clean subprocess.
@@ -32,7 +33,7 @@ public abstract class CleanSubprocess implements SubprocessInterface {
         // Validation logic will be implemented in concrete classes
         // For now, ensure context has validation results
         if (!context.isValidationPassed()) {
-            throw new ETLException("CLEAN", context.getCurrentDate(),
+            throw new ETLException("CLEAN", DateUtils.formatDate(context.getCurrentDate()),
                     "Validation failed. Cannot perform cleanup.");
         }
     }

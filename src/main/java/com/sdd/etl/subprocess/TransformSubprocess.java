@@ -3,6 +3,7 @@ package com.sdd.etl.subprocess;
 import com.sdd.etl.ETLException;
 import com.sdd.etl.context.ETLContext;
 import com.sdd.etl.context.SubprocessType;
+import com.sdd.etl.util.DateUtils;
 
 /**
  * Abstract base class for Transform subprocess.
@@ -32,7 +33,7 @@ public abstract class TransformSubprocess implements SubprocessInterface {
         // Validation logic will be implemented in concrete classes
         // For now, ensure context has extracted data
         if (context.getExtractedData() == null) {
-            throw new ETLException("TRANSFORM", context.getCurrentDate(),
+            throw new ETLException("TRANSFORM", DateUtils.formatDate(context.getCurrentDate()),
                     "No extracted data found in context. Cannot transform data.");
         }
     }

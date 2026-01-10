@@ -3,6 +3,7 @@ package com.sdd.etl.subprocess;
 import com.sdd.etl.ETLException;
 import com.sdd.etl.context.ETLContext;
 import com.sdd.etl.context.SubprocessType;
+import com.sdd.etl.util.DateUtils;
 
 /**
  * Abstract base class for Validate subprocess.
@@ -32,14 +33,14 @@ public abstract class ValidateSubprocess implements SubprocessInterface {
         // Validation logic will be implemented in concrete classes
         // For now, ensure context has loaded data count
         if (context.getLoadedDataCount() == 0) {
-            throw new ETLException("VALIDATE", context.getCurrentDate(),
+            throw new ETLException("VALIDATE", DateUtils.formatDate(context.getCurrentDate()),
                     "No loaded data found in context. Cannot validate data.");
         }
 
         if (context.getConfig() == null ||
             context.getConfig().getValidationRules() == null ||
             context.getConfig().getValidationRules().isEmpty()) {
-            throw new ETLException("VALIDATE", context.getCurrentDate(),
+            throw new ETLException("VALIDATE", DateUtils.formatDate(context.getCurrentDate()),
                     "No validation rules configured. At least one rule is required.");
         }
     }
