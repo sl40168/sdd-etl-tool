@@ -8,6 +8,8 @@ import com.sdd.etl.model.SubprocessResult;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.time.LocalDate;
+import com.sdd.etl.util.DateUtils;
 
 import static org.junit.Assert.*;
 
@@ -30,7 +32,7 @@ public class ETLContextTest {
 
     @Test
     public void testSetCurrentDate_SetsValue() {
-        String date = "20250101";
+        LocalDate date = DateUtils.parseDate("20250101");
         context.setCurrentDate(date);
 
         assertEquals("Current date should be set", date, context.getCurrentDate());
@@ -193,21 +195,21 @@ public class ETLContextTest {
 
     @Test
     public void testGetAll_ReturnsCopyOfData() {
-        context.setCurrentDate("20250101");
+        context.setCurrentDate(DateUtils.parseDate("20250101"));
         context.setCurrentSubprocess(SubprocessType.EXTRACT);
         context.setExtractedDataCount(100);
 
         Map<String, Object> result = context.getAll();
 
         assertNotNull("Result should not be null", result);
-        assertEquals("Should contain current date", "20250101", result.get(ContextConstants.CURRENT_DATE));
+        assertEquals("Should contain current date", DateUtils.parseDate("20250101"), result.get(ContextConstants.CURRENT_DATE));
         assertEquals("Should contain current subprocess", SubprocessType.EXTRACT, result.get(ContextConstants.CURRENT_SUBPROCESS));
         assertEquals("Should contain extracted count", 100, result.get(ContextConstants.EXTRACTED_DATA_COUNT));
     }
 
     @Test
     public void testClear_ClearsAllData() {
-        context.setCurrentDate("20250101");
+        context.setCurrentDate(DateUtils.parseDate("20250101"));
         context.setExtractedDataCount(100);
 
         context.clear();

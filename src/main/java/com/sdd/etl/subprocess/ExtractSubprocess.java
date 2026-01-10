@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.sdd.etl.util.DateUtils;
 
 /**
  * Abstract base class for Extract subprocess.
@@ -42,13 +43,13 @@ public abstract class ExtractSubprocess implements SubprocessInterface {
     @Override
     public void validateContext(ETLContext context) throws ETLException {
         if (context.getConfig() == null) {
-            throw new ETLException("EXTRACT", context.getCurrentDate(),
+            throw new ETLException("EXTRACT", DateUtils.formatDate(context.getCurrentDate()),
                     "Configuration is null. Cannot extract data.");
         }
 
         if (context.getConfig().getSources() == null ||
             context.getConfig().getSources().isEmpty()) {
-            throw new ETLException("EXTRACT", context.getCurrentDate(),
+            throw new ETLException("EXTRACT", DateUtils.formatDate(context.getCurrentDate()),
                     "No data sources configured. At least one source is required.");
         }
     }
@@ -170,7 +171,7 @@ public abstract class ExtractSubprocess implements SubprocessInterface {
             
             List<ETConfiguration.SourceConfig> sources = context.getConfig().getSources();
             if (sources.isEmpty()) {
-                throw new ETLException("EXTRACT", context.getCurrentDate(), 
+                throw new ETLException("EXTRACT", DateUtils.formatDate(context.getCurrentDate()), 
                         "No data sources configured");
             }
             
@@ -201,13 +202,13 @@ public abstract class ExtractSubprocess implements SubprocessInterface {
             try {
                 if (!executorService.awaitTermination(timeoutSeconds, TimeUnit.SECONDS)) {
                     executorService.shutdownNow();
-                    throw new ETLException("EXTRACT", context.getCurrentDate(),
+                    throw new ETLException("EXTRACT", DateUtils.formatDate(context.getCurrentDate()),
                             "Extraction timeout after " + timeoutSeconds + " seconds");
                 }
             } catch (InterruptedException e) {
                 executorService.shutdownNow();
                 Thread.currentThread().interrupt();
-                throw new ETLException("EXTRACT", context.getCurrentDate(),
+                throw new ETLException("EXTRACT", DateUtils.formatDate(context.getCurrentDate()),
                         "Extraction interrupted: " + e.getMessage());
             }
             
@@ -243,7 +244,7 @@ public abstract class ExtractSubprocess implements SubprocessInterface {
             if (!errors.isEmpty()) {
                 if (totalCount.get() == 0) {
                     // All extractors failed
-                    throw new ETLException("EXTRACT", context.getCurrentDate(),
+                    throw new ETLException("EXTRACT", DateUtils.formatDate(context.getCurrentDate()),
                             "All extractors failed: " + errors.get(0).getMessage());
                 } else {
                     // Partial success - log warnings but continue

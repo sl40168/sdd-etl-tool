@@ -4,6 +4,8 @@ import com.sdd.etl.ETLException;
 import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.context.ContextManager;
 import com.sdd.etl.context.ETLContext;
+import com.sdd.etl.util.DateUtils;
+import java.time.LocalDate;
 import com.sdd.etl.model.SourceDataModel;
 import com.sdd.etl.source.extract.Extractor;
 import com.sdd.etl.source.extract.ExtractorFactory;
@@ -52,7 +54,7 @@ public class ExtractSubprocessTest {
     @Before
     public void setUp() {
         config = new ETConfiguration();
-        context = ContextManager.createContext("20250101", config);
+        context = ContextManager.createContext(DateUtils.parseDate("20250101"), config);
         testFactory = new TestExtractorFactory();
         ExtractorFactory.setInstance(testFactory);
     }
@@ -67,7 +69,7 @@ public class ExtractSubprocessTest {
         };
 
         ETLContext badContext = new ETLContext();
-        badContext.setCurrentDate("20250101");
+        badContext.setCurrentDate(DateUtils.parseDate("20250101"));
         // config not set
 
         try {
@@ -354,7 +356,7 @@ public class ExtractSubprocessTest {
                 
                 if (!errors.isEmpty() && totalCount == 0) {
                     // All extractors failed
-                    throw new ETLException("EXTRACT", ctx.getCurrentDate(),
+                    throw new ETLException("EXTRACT", DateUtils.formatDate(ctx.getCurrentDate()),
                             "All extractors failed: " + errors.get(0).getMessage());
                 }
                 

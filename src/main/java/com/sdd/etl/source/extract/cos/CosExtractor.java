@@ -24,6 +24,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.sdd.etl.util.DateUtils;
 
 /**
  * Abstract base class for extractors that retrieve data from Tencent COS.
@@ -171,20 +172,20 @@ public abstract class CosExtractor implements Extractor {
     public void setup(ETLContext context) throws ETLException {
         // Validate context has configuration
         if (context.getConfig() == null) {
-            throw new ETLException("COS_EXTRACTOR", context.getCurrentDate(),
+            throw new ETLException("COS_EXTRACTOR", DateUtils.formatDate(context.getCurrentDate()),
                     "Context configuration is null");
         }
         
         // Find COS source configuration
         this.sourceConfig = findCosSourceConfig(context);
         if (this.sourceConfig == null) {
-            throw new ETLException("COS_EXTRACTOR", context.getCurrentDate(),
+            throw new ETLException("COS_EXTRACTOR", DateUtils.formatDate(context.getCurrentDate()),
                     "No COS source configuration found for extractor category: " + getCategory());
         }
         
         // Validate configuration
         if (!this.sourceConfig.isValid()) {
-            throw new ETLException("COS_EXTRACTOR", context.getCurrentDate(),
+            throw new ETLException("COS_EXTRACTOR", DateUtils.formatDate(context.getCurrentDate()),
                     "Invalid COS configuration: " + this.sourceConfig);
         }
         
@@ -243,7 +244,7 @@ public abstract class CosExtractor implements Extractor {
             if (e instanceof ETLException) {
                 throw e;
             }
-            throw new ETLException("COS_EXTRACTOR", context.getCurrentDate(),
+            throw new ETLException("COS_EXTRACTOR", DateUtils.formatDate(context.getCurrentDate()),
                     "Extraction failed: " + e.getMessage(), e);
         } finally {
             // Cleanup temporary files after successful or failed processing
@@ -276,7 +277,7 @@ public abstract class CosExtractor implements Extractor {
     @Override
     public void validate(ETLContext context) throws ETLException {
         if (getCategory() == null || getCategory().trim().isEmpty()) {
-            throw new ETLException("COS_EXTRACTOR", context.getCurrentDate(),
+            throw new ETLException("COS_EXTRACTOR", DateUtils.formatDate(context.getCurrentDate()),
                     "Extractor category cannot be null or empty");
         }
         
@@ -383,7 +384,7 @@ public abstract class CosExtractor implements Extractor {
     protected File createTempDirectory(ETLContext context) throws ETLException {
         try {
             // Format business date for directory structure
-            String businessDate = formatBusinessDateForDirectory(context.getCurrentDate());
+            String businessDate = formatBusinessDateForDirectory(DateUtils.formatDate(context.getCurrentDate()));
             String category = getCategory();
             
             // Create path: LOCAL_STORAGE/businessDate/category/
@@ -398,7 +399,7 @@ public abstract class CosExtractor implements Extractor {
             return tempDir;
             
         } catch (IOException e) {
-            throw new ETLException("COS_EXTRACTOR", context.getCurrentDate(),
+            throw new ETLException("COS_EXTRACTOR", DateUtils.formatDate(context.getCurrentDate()),
                     "Failed to create temporary directory: " + e.getMessage(), e);
         }
     }
@@ -425,7 +426,7 @@ public abstract class CosExtractor implements Extractor {
      */
     protected List<CosFileMetadata> selectFiles(ETLContext context) throws ETLException {
         String category = getCategory();
-        String businessDate = formatBusinessDateForPath(context.getCurrentDate());
+        String businessDate = formatBusinessDateForPath(DateUtils.formatDate(context.getCurrentDate()));
         String prefix = category + "/" + businessDate + "/";
         
         return cosClient.listObjects(sourceConfig, prefix);

@@ -1,6 +1,8 @@
 package com.sdd.etl.workflow;
 
 import com.sdd.etl.ETLException;
+import com.sdd.etl.util.DateUtils;
+import java.time.LocalDate;
 import com.sdd.etl.context.ETLContext;
 import com.sdd.etl.context.SubprocessType;
 import com.sdd.etl.logging.StatusLogger;
@@ -86,7 +88,7 @@ public class SubprocessExecutorTest {
         // We'll use a spy on a real context to track state changes
         ETLContext realContext = new ETLContext();
         ETLContext spyContext = spy(realContext);
-        when(spyContext.getCurrentDate()).thenReturn("20250101");
+        when(spyContext.getCurrentDate()).thenReturn(DateUtils.parseDate("20250101"));
         
         // Set up execute behaviors to update context
         when(mockExtract.execute(spyContext)).thenAnswer(invocation -> {
@@ -151,7 +153,7 @@ public class SubprocessExecutorTest {
         List<SubprocessInterface> subprocesses = Arrays.asList(mockExtract, mockTransform);
         
         ETLContext mockContext = mock(ETLContext.class);
-        when(mockContext.getCurrentDate()).thenReturn("20250101");
+        when(mockContext.getCurrentDate()).thenReturn(DateUtils.parseDate("20250101"));
         // Mock context state after extract
         when(mockContext.getExtractedDataCount()).thenReturn(100);
         when(mockContext.getExtractedData()).thenReturn(new Object());
@@ -176,7 +178,7 @@ public class SubprocessExecutorTest {
         // Use a spy context to track execution order
         ETLContext realContext = new ETLContext();
         ETLContext spyContext = spy(realContext);
-        when(spyContext.getCurrentDate()).thenReturn("20250101");
+        when(spyContext.getCurrentDate()).thenReturn(DateUtils.parseDate("20250101"));
         
         // Set up execute behaviors
         when(mockExtract.execute(spyContext)).thenAnswer(invocation -> {
@@ -220,7 +222,7 @@ public class SubprocessExecutorTest {
         List<SubprocessInterface> subprocesses = Arrays.asList(mockExtract, mockTransform);
         
         ETLContext mockContext = mock(ETLContext.class);
-        when(mockContext.getCurrentDate()).thenReturn("20250101");
+        when(mockContext.getCurrentDate()).thenReturn(DateUtils.parseDate("20250101"));
         
         // When
         try {
@@ -247,7 +249,7 @@ public class SubprocessExecutorTest {
         List<SubprocessInterface> subprocesses = Arrays.asList(mockValidate, mockClean);
         
         ETLContext mockContext = mock(ETLContext.class);
-        when(mockContext.getCurrentDate()).thenReturn("20250101");
+        when(mockContext.getCurrentDate()).thenReturn(DateUtils.parseDate("20250101"));
         // Mock that load completed
         when(mockContext.getLoadedDataCount()).thenReturn(95);
         

@@ -2,6 +2,7 @@ package com.sdd.etl.source.extract.cos;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.sdd.etl.util.DateUtils;
 import com.sdd.etl.ETLException;
 import com.sdd.etl.context.ETLContext;
 import com.sdd.etl.model.SourceDataModel;
@@ -79,7 +80,7 @@ public class XbondQuoteExtractor extends CosExtractor {
     @Override
     public List<SourceDataModel> extract(ETLContext context) throws ETLException {
         // Format business date from YYYYMMDD to YYYY.MM.DD
-        String dateStr = context.getCurrentDate();
+        String dateStr = DateUtils.formatDate(context.getCurrentDate());
         // Validate context parameters
         if (dateStr == null || dateStr.length() != 8) {
             throw new ETLException("XBOND_QUOTE_EXTRACT", dateStr,

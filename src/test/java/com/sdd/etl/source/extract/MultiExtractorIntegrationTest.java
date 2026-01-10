@@ -3,6 +3,8 @@ package com.sdd.etl.source.extract;
 import com.sdd.etl.ETLException;
 import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.context.ETLContext;
+import com.sdd.etl.util.DateUtils;
+import java.time.LocalDate;
 import com.sdd.etl.model.SourceDataModel;
 import com.sdd.etl.source.extract.cos.CosExtractor;
 import com.sdd.etl.source.extract.cos.CosClient;
@@ -105,7 +107,7 @@ public class MultiExtractorIntegrationTest {
         @Override
         public void setup(ETLContext context) throws ETLException {
             if (shouldThrowOnSetup) {
-                throw new ETLException("STUB_EXTRACTOR", context.getCurrentDate(),
+                throw new ETLException("STUB_EXTRACTOR", DateUtils.formatDate(context.getCurrentDate()),
                         "Stub setup failure");
             }
             // No-op for stub
@@ -118,7 +120,7 @@ public class MultiExtractorIntegrationTest {
         @Override
         public List<SourceDataModel> extract(ETLContext context) throws ETLException {
             if (shouldThrowOnExtract) {
-                throw new ETLException("STUB_EXTRACTOR", context.getCurrentDate(),
+                throw new ETLException("STUB_EXTRACTOR", DateUtils.formatDate(context.getCurrentDate()),
                         "Stub extraction failure");
             }
             return new ArrayList<>(recordsToReturn);
@@ -161,7 +163,7 @@ public class MultiExtractorIntegrationTest {
         
         // Configure default mock behavior
         when(mockContext.getConfig()).thenReturn(mockEtConfig);
-        when(mockContext.getCurrentDate()).thenReturn("20250101");
+        when(mockContext.getCurrentDate()).thenReturn(DateUtils.parseDate("20250101"));
         
         // Setup sources list
         List<ETConfiguration.SourceConfig> sources = new ArrayList<>();
@@ -270,7 +272,7 @@ public class MultiExtractorIntegrationTest {
     @Test
     public void testExtractorFiltering_RespectsContextBusinessDate() throws ETLException {
         // Configure context with specific date
-        when(mockContext.getCurrentDate()).thenReturn("20250115");
+        when(mockContext.getCurrentDate()).thenReturn(DateUtils.parseDate("20250115"));
         
         // Setup extractors
         cosExtractor.setup(mockContext);
@@ -278,7 +280,7 @@ public class MultiExtractorIntegrationTest {
         
         // Validate that extractors can access the context date
 
-        assertEquals("20250115", mockContext.getCurrentDate());
+        assertEquals(DateUtils.parseDate("20250115"), mockContext.getCurrentDate());
         
         // Cleanup
         cosExtractor.cleanup();

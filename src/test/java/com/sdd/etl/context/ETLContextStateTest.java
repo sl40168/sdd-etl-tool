@@ -3,6 +3,7 @@ package com.sdd.etl.context;
 import com.sdd.etl.config.ETConfiguration;
 import org.junit.Test;
 import org.junit.Before;
+import com.sdd.etl.util.DateUtils;
 import static org.junit.Assert.*;
 
 /**
@@ -19,7 +20,7 @@ public class ETLContextStateTest {
     public void setUp() {
         config = new ETConfiguration();
         context = new ETLContext();
-        context.setCurrentDate("20250101");
+        context.setCurrentDate(DateUtils.parseDate("20250101"));
         context.setConfig(config);
     }
 

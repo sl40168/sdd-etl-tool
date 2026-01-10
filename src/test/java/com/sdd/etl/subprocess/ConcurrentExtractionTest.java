@@ -4,6 +4,8 @@ import com.sdd.etl.ETLException;
 import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.context.ContextManager;
 import com.sdd.etl.context.ETLContext;
+import com.sdd.etl.util.DateUtils;
+import java.time.LocalDate;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -27,7 +29,7 @@ public class ConcurrentExtractionTest {
     @Before
     public void setUp() {
         config = new ETConfiguration();
-        context = ContextManager.createContext("20250101", config);
+        context = ContextManager.createContext(DateUtils.parseDate("20250101"), config);
     }
     
     @Test
@@ -66,7 +68,7 @@ public class ConcurrentExtractionTest {
                     try {
                         future.get();
                     } catch (InterruptedException | ExecutionException e) {
-                        throw new ETLException("EXTRACT", ctx.getCurrentDate(), 
+                        throw new ETLException("EXTRACT", DateUtils.formatDate(ctx.getCurrentDate()), 
                                 "Extraction failed: " + e.getMessage());
                     }
                 }
@@ -75,7 +77,7 @@ public class ConcurrentExtractionTest {
                 try {
                     executor.awaitTermination(10, TimeUnit.SECONDS);
                 } catch (InterruptedException e) {
-                    throw new ETLException("EXTRACT", ctx.getCurrentDate(), 
+                    throw new ETLException("EXTRACT", DateUtils.formatDate(ctx.getCurrentDate()), 
                             "Extraction timeout: " + e.getMessage());
                 }
                 
@@ -134,12 +136,12 @@ public class ConcurrentExtractionTest {
                         totalRecords += future.get();
                     } catch (InterruptedException e) {
                         if (firstException == null) {
-                            firstException = new ETLException("EXTRACT", ctx.getCurrentDate(), 
+                            firstException = new ETLException("EXTRACT", DateUtils.formatDate(ctx.getCurrentDate()), 
                                     "Extraction interrupted: " + e.getMessage());
                         }
                     } catch (ExecutionException e) {
                         if (firstException == null) {
-                            firstException = new ETLException("EXTRACT", ctx.getCurrentDate(), 
+                            firstException = new ETLException("EXTRACT", DateUtils.formatDate(ctx.getCurrentDate()), 
                                     "Extraction failed: " + e.getCause().getMessage());
                         }
                     }
@@ -189,10 +191,10 @@ public class ConcurrentExtractionTest {
                     // Set a short timeout
                     return future.get(500, TimeUnit.MILLISECONDS);
                 } catch (TimeoutException e) {
-                    throw new ETLException("EXTRACT", ctx.getCurrentDate(), 
+                    throw new ETLException("EXTRACT", DateUtils.formatDate(ctx.getCurrentDate()), 
                             "Extraction timeout: source took too long");
                 } catch (InterruptedException | ExecutionException e) {
-                    throw new ETLException("EXTRACT", ctx.getCurrentDate(), 
+                    throw new ETLException("EXTRACT", DateUtils.formatDate(ctx.getCurrentDate()), 
                             "Extraction failed: " + e.getMessage());
                 } finally {
                     executor.shutdown();
@@ -270,7 +272,7 @@ public class ConcurrentExtractionTest {
                     } catch (CancellationException e) {
                         // Expected for cancelled tasks
                     } catch (InterruptedException | ExecutionException e) {
-                        throw new ETLException("EXTRACT", ctx.getCurrentDate(), 
+                        throw new ETLException("EXTRACT", DateUtils.formatDate(ctx.getCurrentDate()), 
                                 "Extraction interrupted: " + e.getMessage());
                     }
                 }

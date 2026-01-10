@@ -6,6 +6,7 @@ import com.sdd.etl.context.SubprocessType;
 import com.sdd.etl.logging.StatusLogger;
 import com.sdd.etl.model.SubprocessResult;
 import com.sdd.etl.subprocess.SubprocessInterface;
+import com.sdd.etl.util.DateUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -85,14 +86,14 @@ public class SubprocessExecutor {
             results.put(subprocess.getType().getValue(), result);
 
             // Log subprocess completion
-            statusLogger.logSubprocessCompletion(context.getCurrentDate(),
+            statusLogger.logSubprocessCompletion(DateUtils.formatDate(context.getCurrentDate()),
                     subprocess.getType().getValue(), result);
 
             // Check if subprocess succeeded
             if (!result.isSuccess()) {
                 // Stop execution - subprocess failed
                 throw new ETLException(subprocess.getType().getValue(),
-                        context.getCurrentDate(),
+                        DateUtils.formatDate(context.getCurrentDate()),
                         result.getErrorMessage());
             }
 
@@ -118,7 +119,7 @@ public class SubprocessExecutor {
             case TRANSFORM:
                 // Require EXTRACT to have completed
                 if (context.getExtractedDataCount() == 0 && context.getExtractedData() == null) {
-                    throw new ETLException("TRANSFORM", context.getCurrentDate(),
+                    throw new ETLException("TRANSFORM", DateUtils.formatDate(context.getCurrentDate()),
                             "Extract subprocess did not complete successfully");
                 }
                 break;
@@ -126,7 +127,7 @@ public class SubprocessExecutor {
             case LOAD:
                 // Require TRANSFORM to have completed
                 if (context.getTransformedDataCount() == 0 && context.getTransformedData() == null) {
-                    throw new ETLException("LOAD", context.getCurrentDate(),
+                    throw new ETLException("LOAD", DateUtils.formatDate(context.getCurrentDate()),
                             "Transform subprocess did not complete successfully");
                 }
                 break;
@@ -134,7 +135,7 @@ public class SubprocessExecutor {
             case VALIDATE:
                 // Require LOAD to have completed
                 if (context.getLoadedDataCount() == 0) {
-                    throw new ETLException("VALIDATE", context.getCurrentDate(),
+                    throw new ETLException("VALIDATE", DateUtils.formatDate(context.getCurrentDate()),
                             "Load subprocess did not complete successfully");
                 }
                 break;
@@ -142,7 +143,7 @@ public class SubprocessExecutor {
             case CLEAN:
                 // Require VALIDATE to have completed
                 if (!context.isValidationPassed()) {
-                    throw new ETLException("CLEAN", context.getCurrentDate(),
+                    throw new ETLException("CLEAN", DateUtils.formatDate(context.getCurrentDate()),
                             "Validate subprocess did not complete successfully");
                 }
                 break;

@@ -3,6 +3,8 @@ package com.sdd.etl.context;
 import com.sdd.etl.ETLException;
 import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.subprocess.SubprocessInterface;
+import com.sdd.etl.util.DateUtils;
+import java.time.LocalDate;
 import org.junit.Test;
 import org.junit.Before;
 import static org.junit.Assert.*;
@@ -21,7 +23,7 @@ public class ContextDataFlowIntegrationTest {
     public void setUp() {
         config = new ETConfiguration();
         // Minimal configuration for testing
-        context = ContextManager.createContext("20250101", config);
+        context = ContextManager.createContext(DateUtils.parseDate("20250101"), config);
     }
 
     /**
@@ -49,7 +51,7 @@ public class ContextDataFlowIntegrationTest {
             public void validateContext(ETLContext ctx) throws ETLException {
                 // Basic validation
                 if (ctx.getConfig() == null) {
-                    throw new ETLException("EXTRACT", ctx.getCurrentDate(),
+                    throw new ETLException("EXTRACT", DateUtils.formatDate(ctx.getCurrentDate()),
                             "Configuration is null");
                 }
             }
@@ -103,7 +105,7 @@ public class ContextDataFlowIntegrationTest {
             public void validateContext(ETLContext ctx) throws ETLException {
                 // Ensure extracted data exists
                 if (ctx.getExtractedData() == null) {
-                    throw new ETLException("TRANSFORM", ctx.getCurrentDate(),
+                    throw new ETLException("TRANSFORM", DateUtils.formatDate(ctx.getCurrentDate()),
                             "No extracted data found");
                 }
             }
@@ -155,7 +157,7 @@ public class ContextDataFlowIntegrationTest {
             public void validateContext(ETLContext ctx) throws ETLException {
                 // Ensure transformed data exists
                 if (ctx.getTransformedData() == null) {
-                    throw new ETLException("LOAD", ctx.getCurrentDate(),
+                    throw new ETLException("LOAD", DateUtils.formatDate(ctx.getCurrentDate()),
                             "No transformed data found");
                 }
             }

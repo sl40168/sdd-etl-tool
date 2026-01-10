@@ -1,0 +1,208 @@
+EVENT_TIME_COL='event_time'
+EVENT_TIME_COL_TYPE=TIMESTAMP
+RECEIVE_TIME_COL='receive_time'
+RECEIVE_TIME_COL_TYPE=TIMESTAMP
+CREATE_TIME_COL='create_time'
+CREATE_TIME_COL_TYPE=TIMESTAMP
+
+PARTITION_DATE_COL='business_date'
+PARTITION_DATE_COL_TYPE=DATE
+PARTITION_DATE_COL_SOURCE=EVENT_TIME_COL
+
+PARTITION_SYMBOL_COL='exch_product_id'
+PARTITION_SYMBOL_COL_TYPE=SYMBOL
+
+COMMON_COL=PARTITION_DATE_COL<-PARTITION_SYMBOL_COL<-['product_type','exchange','source','settle_speed']
+COMMON_COL_TYPE=[PARTITION_DATE_COL_TYPE,PARTITION_SYMBOL_COL_TYPE, SYMBOL, SYMBOL, SYMBOL, INT]
+
+QUOTE_BIZ_COL=['level','status','pre_close_price','pre_settle_price','pre_interest','open_price','high_price','low_price','close_price','settle_price','upper_limit','lower_limit','total_volume','total_turnover','open_interest','bid_0_price','bid_0_yield','bid_0_yield_type','bid_0_tradable_volume','bid_0_volume','offer_0_price','offer_0_yield','offer_0_yield_type','offer_0_tradable_volume','offer_0_volume','bid_1_price','bid_1_yield','bid_1_yield_type','bid_1_tradable_volume','bid_1_volume','offer_1_price','offer_1_yield','offer_1_yield_type','offer_1_tradable_volume','offer_1_volume','bid_2_price','bid_2_yield','bid_2_yield_type','bid_2_tradable_volume','bid_2_volume','offer_2_price','offer_2_yield','offer_2_yield_type','offer_2_tradable_volume','offer_2_volume','bid_3_price','bid_3_yield','bid_3_yield_type','bid_3_tradable_volume','bid_3_volume','offer_3_price','offer_3_yield','offer_3_yield_type','offer_3_tradable_volume','offer_3_volume','bid_4_price','bid_4_yield','bid_4_yield_type','bid_4_tradable_volume','bid_4_volume','offer_4_price','offer_4_yield','offer_4_yield_type','offer_4_tradable_volume','offer_4_volume','bid_5_price','bid_5_yield','bid_5_yield_type','bid_5_tradable_volume','bid_5_volume','offer_5_price','offer_5_yield','offer_5_yield_type','offer_5_tradable_volume','offer_5_volume']
+
+QUOTE_BIZ_COL_TYPE=[SYMBOL, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, SYMBOL, DOUBLE, DOUBLE]
+
+TRADE_BIZ_COL=['last_trade_price','last_trade_yield','last_trade_yield_type','last_trade_volume','last_trade_turnover','last_trade_interest','last_trade_side']
+TRADE_BIZ_COL_TYPE=[DOUBLE, DOUBLE, SYMBOL, DOUBLE, DOUBLE, DOUBLE, SYMBOL]
+
+XBOND_QUOTE_TABLE='xbond_quote'
+XBOND_TRADE_TABLE='xbond_trade'
+XBOND_AGGR_TABLE='xbond_market_price'
+FUT_AGGR_TABLE='fut_market_price'
+PRICE_TABLE='market_price'
+STREAM_TABLE_SUFFIX="_stream_temp"
+XBOND_QUOTE_STREAM_TABLE=XBOND_QUOTE_TABLE+STREAM_TABLE_SUFFIX
+XBOND_TRADE_STREAM_TABLE=XBOND_TRADE_TABLE+STREAM_TABLE_SUFFIX
+PRICE_STREAM_TABLE=PRICE_TABLE+STREAM_TABLE_SUFFIX
+XBOND_AGGR_STREAM_TABLE=XBOND_AGGR_TABLE+STREAM_TABLE_SUFFIX
+FUT_AGGR_STREAM_TABLE=FUT_AGGR_TABLE+STREAM_TABLE_SUFFIX
+
+QUOTE_TABLE_COL_SUFFIX="_quote"
+TRADE_TABLE_COL_SUFFIX="_trade"
+
+FUT_REACTIVE_ENGINE_NAME=FUT_AGGR_TABLE + "_engine_temp"
+FUT_REACTIVE_ENGINE_SUB_FUT_ACTION=FUT_REACTIVE_ENGINE_NAME+FUT_AGGR_STREAM_TABLE
+
+appendSuffixForEach=def (suffix, x):x+suffix
+go
+
+PRICE_SUB_XBOND_ACTION=PRICE_TABLE+"_"+XBOND_AGGR_STREAM_TABLE
+PRICE_STREAM_TABLE_TIME_COL=[EVENT_TIME_COL,RECEIVE_TIME_COL,CREATE_TIME_COL]
+PRICE_STREAM_TABLE_TRADE_TIME_COL=each(appendSuffixForEach{TRADE_TABLE_COL_SUFFIX},PRICE_STREAM_TABLE_TIME_COL)
+PRICE_STREAM_TABLE_TRADE_TIME_COL_TYPE=[EVENT_TIME_COL_TYPE,RECEIVE_TIME_COL_TYPE,CREATE_TIME_COL_TYPE]
+PRICE_STREAM_TABLE_QUOTE_TIME_COL=each(appendSuffixForEach{QUOTE_TABLE_COL_SUFFIX},PRICE_STREAM_TABLE_TIME_COL)
+PRICE_STREAM_TABLE_QUOTE_TIME_COL_TYPE=[EVENT_TIME_COL_TYPE,RECEIVE_TIME_COL_TYPE,CREATE_TIME_COL_TYPE]
+
+TRIGGER_COL='tick_type'
+TRIGGER_COL_TYPE=SYMBOL
+TRIGGER_TRADE='TRADE'
+TRIGGER_QUOTE='QUOTE'
+TRIGGER_SNAPSHOT='SNAPSHOT'
+
+def appendWithTimestamp(mutable table, msg)
+{
+    result = select *,now() from msg
+    table.append!(result)
+}
+go
+
+//create stream tables
+QUOTE_STREAM_TABLE_COL=COMMON_COL<-QUOTE_BIZ_COL<-EVENT_TIME_COL<-RECEIVE_TIME_COL<-CREATE_TIME_COL
+QUOTE_STREAM_TABLE_COL_TYPE=COMMON_COL_TYPE<-QUOTE_BIZ_COL_TYPE<-EVENT_TIME_COL_TYPE<-RECEIVE_TIME_COL_TYPE<-CREATE_TIME_COL_TYPE
+QUOTE_STREAM_TABLE_INIT_CAPACITY=600000
+QUOTE_STREAM_TABLE_INIT_SIZE=0
+
+share(streamTable(QUOTE_STREAM_TABLE_INIT_CAPACITY:QUOTE_STREAM_TABLE_INIT_SIZE,QUOTE_STREAM_TABLE_COL, QUOTE_STREAM_TABLE_COL_TYPE),XBOND_QUOTE_STREAM_TABLE)
+setStreamTableTimestamp(objByName(XBOND_QUOTE_STREAM_TABLE),CREATE_TIME_COL)
+
+TRADE_STREAM_TABLE_COL=COMMON_COL<-TRADE_BIZ_COL<-EVENT_TIME_COL<-RECEIVE_TIME_COL<-CREATE_TIME_COL
+TRADE_STREAM_TABLE_COL_TYPE=COMMON_COL_TYPE<-TRADE_BIZ_COL_TYPE<-EVENT_TIME_COL_TYPE<-RECEIVE_TIME_COL_TYPE<-CREATE_TIME_COL_TYPE
+TRADE_STREAM_TABLE_INIT_CAPACITY=30000
+TRADE_STREAM_TABLE_INIT_SIZE=0
+share(streamTable(TRADE_STREAM_TABLE_INIT_CAPACITY:TRADE_STREAM_TABLE_INIT_SIZE,TRADE_STREAM_TABLE_COL,TRADE_STREAM_TABLE_COL_TYPE),XBOND_TRADE_STREAM_TABLE)
+setStreamTableTimestamp(objByName(XBOND_TRADE_STREAM_TABLE),CREATE_TIME_COL)
+
+PRICE_STREAM_TABLE_TIME_COL=[EVENT_TIME_COL,RECEIVE_TIME_COL,CREATE_TIME_COL]
+PRICE_STREAM_TABLE_TRADE_TIME_COL=each(appendSuffixForEach{TRADE_TABLE_COL_SUFFIX},PRICE_STREAM_TABLE_TIME_COL)
+PRICE_STREAM_TABLE_TRADE_TIME_COL_TYPE=[EVENT_TIME_COL_TYPE,RECEIVE_TIME_COL_TYPE,CREATE_TIME_COL_TYPE]
+PRICE_STREAM_TABLE_QUOTE_TIME_COL=each(appendSuffixForEach{QUOTE_TABLE_COL_SUFFIX},PRICE_STREAM_TABLE_TIME_COL)
+PRICE_STREAM_TABLE_QUOTE_TIME_COL_TYPE=[EVENT_TIME_COL_TYPE,RECEIVE_TIME_COL_TYPE,CREATE_TIME_COL_TYPE]
+
+XBOND_AGGR_STREAM_TABLE_COL=COMMON_COL<-TRADE_BIZ_COL<-QUOTE_BIZ_COL<-PRICE_STREAM_TABLE_TRADE_TIME_COL<-PRICE_STREAM_TABLE_QUOTE_TIME_COL<-TRIGGER_COL<-RECEIVE_TIME_COL
+XBOND_AGGR_STREAM_TABLE_COL_TYPE=COMMON_COL_TYPE<-TRADE_BIZ_COL_TYPE<-QUOTE_BIZ_COL_TYPE<-PRICE_STREAM_TABLE_TRADE_TIME_COL_TYPE<-PRICE_STREAM_TABLE_QUOTE_TIME_COL_TYPE<-TRIGGER_COL_TYPE<-RECEIVE_TIME_COL_TYPE
+
+PRICE_STREAM_TABLE_COL=XBOND_AGGR_STREAM_TABLE_COL<-CREATE_TIME_COL
+PRICE_STREAM_TABLE_COL_TYPE=XBOND_AGGR_STREAM_TABLE_COL_TYPE<-CREATE_TIME_COL_TYPE
+
+PRICE_STREAM_TABLE_INIT_CAPACITY=QUOTE_STREAM_TABLE_INIT_CAPACITY+TRADE_STREAM_TABLE_INIT_CAPACITY
+PRICE_STREAM_TABLE_INIT_SIZE=QUOTE_STREAM_TABLE_INIT_SIZE+TRADE_STREAM_TABLE_INIT_SIZE
+
+share(streamTable(PRICE_STREAM_TABLE_INIT_CAPACITY:PRICE_STREAM_TABLE_INIT_SIZE,XBOND_AGGR_STREAM_TABLE_COL,XBOND_AGGR_STREAM_TABLE_COL_TYPE),XBOND_AGGR_STREAM_TABLE)
+share(streamTable(PRICE_STREAM_TABLE_INIT_CAPACITY:PRICE_STREAM_TABLE_INIT_SIZE,PRICE_STREAM_TABLE_COL,PRICE_STREAM_TABLE_COL_TYPE),PRICE_STREAM_TABLE)
+
+
+//create xbond aggregated price engine
+SNAPSHOT_ENGINE_JOIN_MATCHING_COL=COMMON_COL
+XBOND_AGGR_QUOTE_ENGINE_NAME='XBOND_AGGR_QUOTE_ENGINE_TEMP'
+quote_trigger_metrics=[]
+
+for(col in sqlCol(TRADE_BIZ_COL,qualifier=XBOND_TRADE_STREAM_TABLE)){
+    quote_trigger_metrics.join!(col)
+}
+for(col in sqlCol(QUOTE_BIZ_COL,qualifier=XBOND_QUOTE_STREAM_TABLE)){
+    quote_trigger_metrics.join!(col)
+}
+for(col in sqlCol(PRICE_STREAM_TABLE_TIME_COL,qualifier=XBOND_TRADE_STREAM_TABLE)){
+    quote_trigger_metrics.join!(col)
+}
+for(col in sqlCol(PRICE_STREAM_TABLE_TIME_COL,qualifier=XBOND_QUOTE_STREAM_TABLE)){
+    quote_trigger_metrics.join!(col)
+}
+quote_trigger_metrics.join!(<'QUOTE'>)
+quote_trigger_metrics.join!(<xbond_quote_stream_temp.receive_time>)
+
+xbond_aggr_quote_engine=createLookupJoinEngine(XBOND_AGGR_QUOTE_ENGINE_NAME,objByName(XBOND_QUOTE_STREAM_TABLE),objByName(XBOND_TRADE_STREAM_TABLE),objByName(XBOND_AGGR_STREAM_TABLE),metrics=quote_trigger_metrics,matchingColumn=SNAPSHOT_ENGINE_JOIN_MATCHING_COL,rightTimeColumn=RECEIVE_TIME_COL,keepDuplicates=false)
+
+XBOND_AGGR_TRADE_ENGINE_NAME='XBOND_AGGR_TRADE_ENGINE_TEMP'
+trade_trigger_metrics=[]
+
+for(col in sqlCol(TRADE_BIZ_COL,qualifier=XBOND_TRADE_STREAM_TABLE)){
+    trade_trigger_metrics.join!(col)
+}
+for(col in sqlCol(QUOTE_BIZ_COL,qualifier=XBOND_QUOTE_STREAM_TABLE)){
+    trade_trigger_metrics.join!(col)
+}
+for(col in sqlCol(PRICE_STREAM_TABLE_TIME_COL,qualifier=XBOND_TRADE_STREAM_TABLE)){
+    trade_trigger_metrics.join!(col)
+}
+for(col in sqlCol(PRICE_STREAM_TABLE_TIME_COL,qualifier=XBOND_QUOTE_STREAM_TABLE)){
+    trade_trigger_metrics.join!(col)
+}
+trade_trigger_metrics.join!(<'TRADE'>)
+trade_trigger_metrics.join!(<xbond_trade_stream_temp.receive_time>)
+xbond_aggr_trade_engine=createLookupJoinEngine(XBOND_AGGR_TRADE_ENGINE_NAME,objByName(XBOND_TRADE_STREAM_TABLE),objByName(XBOND_QUOTE_STREAM_TABLE),objByName(XBOND_AGGR_STREAM_TABLE),metrics=trade_trigger_metrics,matchingColumn=SNAPSHOT_ENGINE_JOIN_MATCHING_COL,rightTimeColumn=RECEIVE_TIME_COL,keepDuplicates=false)
+
+XBOND_AGGR_QUOTE_ENGINE_LEFT_ACTION=XBOND_AGGR_QUOTE_ENGINE_NAME+"_LEFT"
+XBOND_AGGR_QUOTE_ENGINE_RIGHT_ACTION=XBOND_AGGR_QUOTE_ENGINE_NAME+"_RIGHT"
+XBOND_AGGR_TRADE_ENGINE_LEFT_ACTION=XBOND_AGGR_TRADE_ENGINE_NAME+"_LEFT"
+XBOND_AGGR_TRADE_ENGINE_RIGHT_ACTION=XBOND_AGGR_TRADE_ENGINE_NAME+"_RIGHT"
+
+subscribeTable(tableName=XBOND_QUOTE_STREAM_TABLE,actionName=XBOND_AGGR_QUOTE_ENGINE_LEFT_ACTION,handler=getLeftStream(xbond_aggr_quote_engine),hash=0,msgAsTable=true,throttle=0.01,handlerNeedMsgId=true)
+subscribeTable(tableName=XBOND_QUOTE_STREAM_TABLE,actionName=XBOND_AGGR_TRADE_ENGINE_RIGHT_ACTION,handler=getRightStream(xbond_aggr_trade_engine),hash=0,msgAsTable=true,throttle=0.01,handlerNeedMsgId=true)
+subscribeTable(tableName=XBOND_TRADE_STREAM_TABLE,actionName=XBOND_AGGR_QUOTE_ENGINE_RIGHT_ACTION,handler=getRightStream(xbond_aggr_quote_engine),hash=2,msgAsTable=true,throttle=0.01,handlerNeedMsgId=true)
+subscribeTable(tableName=XBOND_TRADE_STREAM_TABLE,actionName=XBOND_AGGR_TRADE_ENGINE_LEFT_ACTION,handler=getLeftStream(xbond_aggr_trade_engine),hash=2,msgAsTable=true,throttle=0.01,handlerNeedMsgId=true)
+
+subscribeTable(tableName=XBOND_AGGR_STREAM_TABLE,actionName=PRICE_SUB_XBOND_ACTION,handler=appendWithTimestamp{objByName(PRICE_STREAM_TABLE)},msgAsTable=true,hash=4)
+
+FUT_STREAM_TABLE_COL=PRICE_STREAM_TABLE_COL
+FUT_STREAM_TABLE_COL_TYPE=PRICE_STREAM_TABLE_COL_TYPE
+FUT_STREAM_TABLE_INIT_CAPACITY=30000
+FUT_STREAM_TABLE_INIT_SIZE=0
+
+share(streamTable(FUT_STREAM_TABLE_INIT_CAPACITY:FUT_STREAM_TABLE_INIT_SIZE,FUT_STREAM_TABLE_COL,FUT_STREAM_TABLE_COL_TYPE),FUT_AGGR_STREAM_TABLE)
+
+fut_calc_metrics=dict(['last_trade_volume','last_trade_turnover','last_trade_interest','create_time'],[<total_volume-ifValid(prev(total_volume),0)>,<total_turnover-ifValid(prev(total_turnover),0)>,<open_interest-ifValid(prev(open_interest),0)>,<now()>])
+
+FUT_RECEIVE_TIME_COL=RECEIVE_TIME_COL+QUOTE_TABLE_COL_SUFFIX
+FUT_STREAM_TABLE_VAL_COL=TRADE_BIZ_COL<-QUOTE_BIZ_COL<-PRICE_STREAM_TABLE_TRADE_TIME_COL<-PRICE_STREAM_TABLE_QUOTE_TIME_COL<-TRIGGER_COL<-FUT_RECEIVE_TIME_COL<-CREATE_TIME_COL
+fut_metric=[]
+for(col in FUT_STREAM_TABLE_VAL_COL) {
+    if(fut_calc_metrics[col]==NULL) {
+        fut_metric.join!(sqlCol([col])[0])
+    } else{
+        fut_metric.join!(fut_calc_metrics[col])
+    }
+}
+
+fut_reactive_engine=createReactiveStateEngine(FUT_REACTIVE_ENGINE_NAME,fut_metric,objByName(FUT_AGGR_STREAM_TABLE),objByName(PRICE_STREAM_TABLE),msgAsTable=true,keyColumn=COMMON_COL)
+
+subscribeTable(tableName=FUT_AGGR_STREAM_TABLE,actionName=FUT_REACTIVE_ENGINE_SUB_FUT_ACTION,handler=appendMsg{fut_reactive_engine},msgAsTable=true,throttle=0.01,hash=6,handlerNeedMsgId=true)
+
+go
+
+XBOND_TRADE_STORAGE_ACTION='xbond_trade_storage_action_temp'
+XBOND_QUOTE_STORAGE_ACTION='xbond_quote_storage_action_temp'
+XBOND_PRICE_STORAGE_ACTION='xbond_price_storage_action_temp'
+PRICE_STORAGE_ACTION='price_storage_action_temp'
+FUT_PRICE_STORAGE_ACTION='fut_price_storage_action_temp'
+
+QUOTE_BATCH_SIZE=10000
+TRADE_BATCH_SIZE=2000
+THROTTLE=1
+MSG_AS_TABLE=true
+
+OFFSET=-3
+DATABASE_URL="dfs://Zing_MDS"
+
+xbond_quote_table=loadTable(DATABASE_URL, XBOND_QUOTE_TABLE)
+subscribeTable(tableName=XBOND_QUOTE_STREAM_TABLE,actionName=XBOND_QUOTE_STORAGE_ACTION,offset=OFFSET,handler=appendWithTimestamp{xbond_quote_table},msgAsTable=MSG_AS_TABLE,batchSize=QUOTE_BATCH_SIZE,throttle=THROTTLE,hash=1)
+
+xbond_trade_table=loadTable(DATABASE_URL,XBOND_TRADE_TABLE)
+subscribeTable(tableName=XBOND_TRADE_STREAM_TABLE,actionName=XBOND_TRADE_STORAGE_ACTION,offset=OFFSET,handler=appendWithTimestamp{xbond_trade_table},msgAsTable=MSG_AS_TABLE,batchSize=TRADE_BATCH_SIZE,throttle=THROTTLE,hash=3)
+
+xbond_price_table=loadTable(DATABASE_URL,XBOND_AGGR_TABLE)
+subscribeTable(tableName=XBOND_AGGR_STREAM_TABLE,actionName=XBOND_PRICE_STORAGE_ACTION,offset=OFFSET,handler=appendWithTimestamp{xbond_price_table},msgAsTable=MSG_AS_TABLE,batchSize=TRADE_BATCH_SIZE,throttle=THROTTLE,hash=5)
+
+price_table=loadTable(DATABASE_URL,PRICE_TABLE)
+subscribeTable(tableName=PRICE_STREAM_TABLE,actionName=PRICE_STORAGE_ACTION,offset=OFFSET,handler=appendWithTimestamp{price_table},msgAsTable=MSG_AS_TABLE,batchSize=QUOTE_BATCH_SIZE,throttle=THROTTLE,hash=7)
+
+fut_price_table=loadTable(DATABASE_URL,FUT_AGGR_TABLE)
+subscribeTable(tableName=FUT_AGGR_STREAM_TABLE,actionName=FUT_PRICE_STORAGE_ACTION,offset=OFFSET,handler=appendWithTimestamp{fut_price_table},msgAsTable=MSG_AS_TABLE,batchSize=QUOTE_BATCH_SIZE,throttle=THROTTLE,hash=9)
+go
