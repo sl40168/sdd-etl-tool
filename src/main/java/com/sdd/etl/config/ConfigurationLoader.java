@@ -1,6 +1,7 @@
 package com.sdd.etl.config;
 
 import com.sdd.etl.ETLException;
+import com.sdd.etl.source.extract.cos.config.CosSourceConfig;
 
 import org.apache.commons.configuration2.HierarchicalConfiguration;
 import org.apache.commons.configuration2.INIConfiguration;
@@ -9,7 +10,12 @@ import org.apache.commons.configuration2.builder.fluent.Parameters;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Loads ETL configuration from INI file.
@@ -80,17 +86,48 @@ public class ConfigurationLoader {
         // Get source count
         int sourceCount = iniConfig.getInt("sources.count", 0);
 
+        // Standard field suffixes
+        java.util.Set<String> standardFields = new java.util.HashSet<>();
+        standardFields.add("name");
+        standardFields.add("type");
+        standardFields.add("connectionString");
+        standardFields.add("primaryKeyField");
+        standardFields.add("extractQuery");
+        standardFields.add("dateField");
+
         // Parse each source
         for (int i = 1; i <= sourceCount; i++) {
             String sectionKey = "source" + i;
 
-            ETConfiguration.SourceConfig source = new ETConfiguration.SourceConfig();
+            String type = iniConfig.getString(sectionKey + ".type");
+            ETConfiguration.SourceConfig source;
+            if (ETConfiguration.SOURCE_TYPE_COS.equals(type)) {
+                source = new CosSourceConfig();
+            } else {
+                source = new ETConfiguration.SourceConfig();
+            }
             source.setName(iniConfig.getString(sectionKey + ".name"));
-            source.setType(iniConfig.getString(sectionKey + ".type"));
+            source.setType(type);
             source.setConnectionString(iniConfig.getString(sectionKey + ".connectionString"));
             source.setPrimaryKeyField(iniConfig.getString(sectionKey + ".primaryKeyField"));
             source.setExtractQuery(iniConfig.getString(sectionKey + ".extractQuery"));
             source.setDateField(iniConfig.getString(sectionKey + ".dateField"));
+
+            // Parse additional properties
+            String prefix = sectionKey + ".";
+            Iterator<String> keys = iniConfig.getKeys(prefix);
+            if (keys != null) {
+                while (keys.hasNext()) {
+                    String fullKey = keys.next();
+                    String suffix = fullKey.substring(prefix.length());
+                    if (!standardFields.contains(suffix)) {
+                        String value = iniConfig.getString(fullKey);
+                        if (value != null) {
+                            source.setProperty(suffix, value);
+                        }
+                    }
+                }
+            }
 
             if (!source.isValid()) {
                 throw new ConfigurationException(

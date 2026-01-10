@@ -9,6 +9,7 @@ import com.sdd.etl.logging.ETLogger;
 import com.sdd.etl.model.DailyProcessResult;
 import com.sdd.etl.model.SubprocessResult;
 import com.sdd.etl.subprocess.SubprocessInterface;
+import com.sdd.etl.subprocess.ExtractSubprocess.MultiSourceExtractSubprocess;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -154,8 +155,17 @@ public class DailyETLWorkflow {
      * @return list of subprocesses in execution order
      */
     protected List<SubprocessInterface> createSubprocesses() {
-        // For this phase, we create placeholder implementations
-        // Concrete implementations will be added in future phases
-        return new ArrayList<>();
+        List<SubprocessInterface> subprocesses = new ArrayList<>();
+        
+        // Extract subprocess with support for multiple extractors
+        subprocesses.add(new MultiSourceExtractSubprocess());
+        
+        // TODO: Add concrete implementations for other subprocesses
+        // subprocesses.add(new ValidateSubprocess()); // Abstract - needs concrete impl
+        // subprocesses.add(new TransformSubprocess()); // Abstract - needs concrete impl  
+        // subprocesses.add(new LoadSubprocess()); // Abstract - needs concrete impl
+        // subprocesses.add(new CleanSubprocess()); // Abstract - needs concrete impl
+        
+        return subprocesses;
     }
 }

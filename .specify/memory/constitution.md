@@ -1,20 +1,22 @@
 <!--
 Sync Impact Report:
-- Version change: N/A → 1.0.0
-- Added sections: All sections (initial creation)
+- Version change: 1.1.0 → 1.2.0
+- Modified sections: Principle 8 wording changed from MUST to ENCOURAGE
+- Added sections: Principle 11 about primitive number fields initialization
 - Removed sections: N/A
 - Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (Constitution Check section aligns)
-  ✅ .specify/templates/spec-template.md (requirements alignment)
+  ✅ .specify/templates/plan-template.md (Constitution Check section updated)
+  ✅ .specify/templates/spec-template.md (requirements alignment reviewed)
   ✅ .specify/templates/tasks-template.md (task categorization aligns)
-- Follow-up TODOs: None
+  ✅ .specify/templates/agent-file-template.md (Development guidelines reviewed)
+  Follow-up TODOs: None
 -->
 
 # Project Constitution
 
-**Constitution Version**: 1.0.0
-**Ratification Date**: 2026-01-08
-**Last Amended Date**: 2026-01-08
+**Constitution Version**: 1.2.0
+**Ratification Date**: 2026-01-09
+**Last Amended Date**: 2026-01-09
 
 ## Project Overview
 
@@ -34,7 +36,7 @@ Sync Impact Report:
 
 The project MUST be built on Java 8 platform. All code, dependencies, and build configurations MUST target Java 8 compatibility.
 
-**Rationale**: Ensures compatibility with legacy systems and standardizes the runtime environment across deployment targets.
+**Rationale**: Ensures compatibility with legacy systems and standardizes runtime environment across deployment targets.
 
 ---
 
@@ -64,7 +66,7 @@ All configurations MUST be configured and loaded from INI configuration file for
 
 ### 5. Component Boundary Clarity
 
-The project MUST keep the boundaries of components clearly. Each component MUST have well-defined responsibilities and interfaces.
+The project MUST keep to boundaries of components clearly. Each component MUST have well-defined responsibilities and interfaces.
 
 **Rationale**: Facilitates maintainability, testing, and future enhancements by ensuring loose coupling and high cohesion.
 
@@ -88,7 +90,7 @@ All business bug fixes MUST be recorded by version and referred in future. Each 
 
 ### 8. Use Third-Party Open Source Libraries
 
-The project MUST encourage using well-known third-party open source libraries, instead of building your own implementations.
+The project ENCOURAGES using well-known third-party open source libraries, instead of building your own implementations.
 
 **Rationale**: Leverages community-tested solutions, reduces development time, and improves reliability by avoiding reinventing the wheel.
 
@@ -113,6 +115,14 @@ The following directories and files MUST NOT be modified:
 
 ---
 
+### 11. Primitive Number Field Initialization
+
+For all fields of primitive number type, such as int, double, long, and so on, DO NOT use default value such as 0 to initialize. Users cannot know whether it's a real 0 or just not set yet.
+
+**Rationale**: Prevents ambiguity in data interpretation and ensures explicit initialization of numeric fields, improving code clarity and reducing bugs.
+
+---
+
 ## Governance
 
 ### Amendment Procedure
@@ -129,7 +139,7 @@ The following directories and files MUST NOT be modified:
 
 Constitution versions follow semantic versioning (MAJOR.MINOR.PATCH):
 - Version MUST increment with any amendment
-- Current version: 1.0.0
+- Current version: 1.2.0
 - Historical versions MUST be preserved in commit history
 
 ### Compliance Review
@@ -157,3 +167,4 @@ The following templates depend on this constitution and MUST remain synchronized
 | Config Format | INI | Only INI files |
 | Test Coverage | >60% | TDD required |
 | Build Status | All tests pass | No exceptions |
+| Primitive Fields | No default zero | Must be explicitly initialized |

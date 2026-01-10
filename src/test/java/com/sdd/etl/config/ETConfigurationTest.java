@@ -42,7 +42,7 @@ public class ETConfigurationTest {
         source.setConnectionString("jdbc:mysql://localhost:3306/db");
         source.setPrimaryKeyField("id");
 
-        assertFalse("SourceConfig should be invalid when type is missing", source.isValid());
+        assertFalse("SourceConfig should be invalid when name is missing", source.isValid());
     }
 
     @Test
@@ -91,5 +91,101 @@ public class ETConfigurationTest {
 
         assertFalse("TargetConfig should be invalid when batchSize <= 0", target.isValid());
     }
-}
 
+    @Test
+    public void testFindSourceConfig_ReturnsMatchingConfig() {
+        ETConfiguration config = new ETConfiguration();
+        ETConfiguration.SourceConfig cosSource = new ETConfiguration.SourceConfig();
+        cosSource.setName("cos1");
+        cosSource.setType("cos");
+        cosSource.setConnectionString("cos://");
+        cosSource.setPrimaryKeyField("id");
+        config.addSource(cosSource);
+
+        ETConfiguration.SourceConfig jdbcSource = new ETConfiguration.SourceConfig();
+        jdbcSource.setName("jdbc1");
+        jdbcSource.setType("JDBC");
+        jdbcSource.setConnectionString("jdbc:mysql://");
+        jdbcSource.setPrimaryKeyField("id");
+        config.addSource(jdbcSource);
+
+        ETConfiguration.SourceConfig found = config.findSourceConfig("cos");
+        assertNotNull(found);
+        assertEquals("cos1", found.getName());
+        assertEquals("cos", found.getType());
+    }
+
+    @Test
+    public void testFindSourceConfig_ReturnsNullWhenNoMatch() {
+        ETConfiguration config = new ETConfiguration();
+        config.addSource(new ETConfiguration.SourceConfig());
+
+        ETConfiguration.SourceConfig found = config.findSourceConfig("unknown");
+        assertNull(found);
+    }
+
+    @Test
+    public void testFindSourceConfig_ReturnsNullWhenSourcesNull() {
+        ETConfiguration config = new ETConfiguration();
+        // sources is initialized as empty list, not null
+        config.setSources(null);
+
+        ETConfiguration.SourceConfig found = config.findSourceConfig("cos");
+        assertNull(found);
+    }
+
+    @Test
+    public void testFindSourceConfigByCategory_ReturnsMatchingConfig() {
+        ETConfiguration config = new ETConfiguration();
+        ETConfiguration.SourceConfig cosSource1 = new ETConfiguration.SourceConfig();
+        cosSource1.setName("cos1");
+        cosSource1.setType("cos");
+        cosSource1.setConnectionString("cos://");
+        cosSource1.setPrimaryKeyField("id");
+        cosSource1.setProperty("category", "AllPriceDepth");
+        config.addSource(cosSource1);
+
+        ETConfiguration.SourceConfig cosSource2 = new ETConfiguration.SourceConfig();
+        cosSource2.setName("cos2");
+        cosSource2.setType("cos");
+        cosSource2.setConnectionString("cos://");
+        cosSource2.setPrimaryKeyField("id");
+        cosSource2.setProperty("category", "OtherCategory");
+        config.addSource(cosSource2);
+
+        ETConfiguration.SourceConfig found = config.findSourceConfigByCategory("cos", "AllPriceDepth");
+        assertNotNull(found);
+        assertEquals("cos1", found.getName());
+        assertEquals("AllPriceDepth", found.getProperty("category"));
+    }
+
+    @Test
+    public void testFindSourceConfigByCategory_ReturnsNullWhenNoMatch() {
+        ETConfiguration config = new ETConfiguration();
+        ETConfiguration.SourceConfig cosSource = new ETConfiguration.SourceConfig();
+        cosSource.setName("cos1");
+        cosSource.setType("cos");
+        cosSource.setConnectionString("cos://");
+        cosSource.setPrimaryKeyField("id");
+        cosSource.setProperty("category", "AllPriceDepth");
+        config.addSource(cosSource);
+
+        ETConfiguration.SourceConfig found = config.findSourceConfigByCategory("cos", "UnknownCategory");
+        assertNull(found);
+    }
+
+    @Test
+    public void testFindSourceConfigByCategory_ReturnsNullWhenCategoryNull() {
+        ETConfiguration config = new ETConfiguration();
+        ETConfiguration.SourceConfig cosSource = new ETConfiguration.SourceConfig();
+        cosSource.setName("cos1");
+        cosSource.setType("cos");
+        cosSource.setConnectionString("cos://");
+        cosSource.setPrimaryKeyField("id");
+        cosSource.setProperty("category", "AllPriceDepth");
+        config.addSource(cosSource);
+
+        ETConfiguration.SourceConfig found = config.findSourceConfigByCategory("cos", null);
+        assertNull(found);
+    }
+}

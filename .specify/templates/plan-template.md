@@ -43,6 +43,7 @@ Refer to `.specify/memory/constitution.md` for current project principles. Gates
 - Third-party library usage
 - Full build/test pass
 - Protected files restriction
+- Primitive number field initialization (no default zero)
 
 Any violations MUST be documented in the Complexity Tracking section below.
 

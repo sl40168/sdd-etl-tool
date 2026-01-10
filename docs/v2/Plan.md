@@ -26,7 +26,7 @@ What we need to do in this phase include:
     - Bucket
     - Certification
 4. Except `BUSINESS_DATE`, COS needs an additional information `CATEGORY`, which will be provided by concrete extractors, to filter source data.
-5. The filter condition of COS is `/CATEGORY/BUSINESS_DATE`, but **NOTE** the format of `BUSINESS_DATE` may be different in concrete extractors.
+5. The filter condition of COS is `/CATEGORY/BUSINESS_DATE/*.csv`, but **NOTE** the format of `BUSINESS_DATE` may be different in concrete extractors.
 6. The `LOCAL_STORAGE` is `/BUSINESS_DATE/CATEGORY` for any concrete extractor, and the format of `BUSINESS_DATE` **MUST** be `YYYYMMDD`
 
 ## III. Provide a concrete implementation for **Xbond Quote** Data Source
@@ -149,3 +149,8 @@ The fields not mentioned **MUST** be created but keep null.
      - If `underlying_md_entry_type` = 1 and `underlying_md_price_level` = 6, then `underlying_md_entry_px`->`offer_5_price`, `underlying_yield`->`offer_5_yield`, `underlying_yield_type`->`offer_5_yield_type` and `underlying_md_entry_size`->`offer_5_tradable_volume`
      - ......
 
+## Reference Documents
+
+Document regarding Tencent COS **FOR YOUR INFORMATION**
+- https://doc.fincloud.tencent.cn/tcloud/Storage/COS/402191/876795/java_qstart
+- https://doc.fincloud.tencent.cn/tcloud/Storage/COS/402191/876795/java_ifd
