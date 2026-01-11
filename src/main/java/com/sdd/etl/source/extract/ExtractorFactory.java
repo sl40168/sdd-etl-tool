@@ -3,6 +3,7 @@ package com.sdd.etl.source.extract;
 import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.source.extract.cos.config.CosSourceConfig;
 import com.sdd.etl.source.extract.cos.XbondQuoteExtractor;
+import com.sdd.etl.source.extract.cos.XbondTradeExtractor;
 import com.sdd.etl.ETLException;
 import com.sdd.etl.source.extract.cos.CosExtractor;
 import org.slf4j.Logger;
@@ -85,6 +86,15 @@ public class ExtractorFactory {
         if ("AllPriceDepth".equalsIgnoreCase(category)) {
             LOG.debug("Creating XbondQuoteExtractor for category: {}", category);
             XbondQuoteExtractor extractor = new XbondQuoteExtractor();
+            // Verify extractor's category matches configuration category
+            if (!category.equalsIgnoreCase(extractor.getCategory())) {
+                throw new ETLException("EXTRACT", "00000000", "Extractor category mismatch: expected '" + category + 
+                    "', but extractor returns '" + extractor.getCategory() + "'");
+            }
+            return extractor;
+        } else if ("TradeData".equalsIgnoreCase(category)) {
+            LOG.debug("Creating XbondTradeExtractor for category: {}", category);
+            XbondTradeExtractor extractor = new XbondTradeExtractor();
             // Verify extractor's category matches configuration category
             if (!category.equalsIgnoreCase(extractor.getCategory())) {
                 throw new ETLException("EXTRACT", "00000000", "Extractor category mismatch: expected '" + category + 

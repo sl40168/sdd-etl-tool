@@ -176,7 +176,7 @@ public class MultiExtractorIntegrationTest {
         when(mockCosConfig.getMaxFileSizeOrDefault()).thenReturn(100 * 1024 * 1024L); // 100MB
         
         // Create XbondQuoteExtractor with mocked COS client
-        cosExtractor = new CosExtractor() {
+        cosExtractor = new CosExtractor<RawQuoteRecord>() {
             @Override
             public String getCategory() {
                 return "AllPriceDepth";
