@@ -10,6 +10,8 @@ import com.sdd.etl.model.DailyProcessResult;
 import com.sdd.etl.model.SubprocessResult;
 import com.sdd.etl.subprocess.SubprocessInterface;
 import com.sdd.etl.subprocess.ExtractSubprocess.MultiSourceExtractSubprocess;
+import com.sdd.etl.subprocess.LoadSubprocess;
+import com.sdd.etl.subprocess.CleanSubprocess;
 import com.sdd.etl.util.DateUtils;
 
 import java.util.ArrayList;
@@ -161,11 +163,13 @@ public class DailyETLWorkflow {
         // Extract subprocess with support for multiple extractors
         subprocesses.add(new MultiSourceExtractSubprocess());
         
-        // TODO: Add concrete implementations for other subprocesses
+        // Load and Clean subprocesses for DolphinDB loader (005-dolphindb-loader)
+        subprocesses.add(new LoadSubprocess());
+        subprocesses.add(new CleanSubprocess());
+        
+        // TODO: Add concrete implementations for Validate and Transform subprocesses
         // subprocesses.add(new ValidateSubprocess()); // Abstract - needs concrete impl
         // subprocesses.add(new TransformSubprocess()); // Abstract - needs concrete impl  
-        // subprocesses.add(new LoadSubprocess()); // Abstract - needs concrete impl
-        // subprocesses.add(new CleanSubprocess()); // Abstract - needs concrete impl
         
         return subprocesses;
     }

@@ -1,8 +1,9 @@
 package com.sdd.etl.model;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.sdd.etl.loader.annotation.ColumnOrder;
+import java.lang.reflect.Field;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Abstract base class representing data structure for target systems.
@@ -43,6 +44,13 @@ public abstract class TargetDataModel {
     public abstract String getTargetType();
 
     /**
+     * Gets data type identifier.
+     *
+     * @return data type (e.g., "XBOND_QUOTE", "XBOND_TRADE", "BOND_FUTURE_QUOTE")
+     */
+    public abstract String getDataType();
+
+    /**
      * Gets metadata about data fields and types.
      *
      * @return map of metadata
@@ -76,5 +84,44 @@ public abstract class TargetDataModel {
      */
     public void setRecords(List<Map<String, Object>> records) {
         this.records = records;
+    }
+
+    /**
+     * Gets field names in the order specified by @ColumnOrder annotations.
+     * This is critical for DolphinDB column-based storage where field order
+     * must match the database schema definition.
+     *
+     * Fields without @ColumnOrder annotation are appended at the end in natural order.
+     * Synthetic fields (compiler-generated) are excluded.
+     *
+     * @return ordered list of field names
+     */
+    public List<String> getOrderedFieldNames() {
+        Class<?> clazz = getClass();
+        Field[] fields = clazz.getDeclaredFields();
+
+        // Collect fields with their order values
+        Map<Integer, String> orderedFields = new TreeMap<>();
+        List<String> unorderedFields = new ArrayList<>();
+
+        for (Field field : fields) {
+            // Skip synthetic fields (compiler-generated)
+            if (field.isSynthetic()) {
+                continue;
+            }
+
+            ColumnOrder annotation = field.getAnnotation(ColumnOrder.class);
+            if (annotation != null) {
+                orderedFields.put(annotation.value(), field.getName());
+            } else {
+                unorderedFields.add(field.getName());
+            }
+        }
+
+        // Combine ordered and unordered fields
+        List<String> result = new ArrayList<>(orderedFields.values());
+        result.addAll(unorderedFields);
+
+        return result;
     }
 }

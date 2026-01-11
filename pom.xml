@@ -99,6 +99,13 @@
             <version>8.0.28</version>
         </dependency>
 
+        <!-- DolphinDB Java API -->
+        <dependency>
+            <groupId>com.dolphindb</groupId>
+            <artifactId>dolphindb-javaapi</artifactId>
+            <version>3.00.3.1</version>
+        </dependency>
+
         <!-- Apache Commons DBCP2 (Connection Pooling) -->
         <dependency>
             <groupId>org.apache.commons</groupId>

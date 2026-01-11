@@ -1,6 +1,6 @@
 ﻿# sdd-etl-tool Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-01-09
+Auto-generated from all feature plans. Last updated: 2026-01-11
 
 ## Active Technologies
 - Java 8 (non-negotiable per Constitution) + Maven wrapper, Apache Commons CLI, Apache Commons Configuration (INI parsing), JUnit 4, Mockito, SLF4J + Logback (logging) (001-cos-xbond-quote-extract)
@@ -15,7 +15,21 @@ Auto-generated from all feature plans. Last updated: 2026-01-09
 
 ```text
 src/
-tests/
+  main/
+    java/
+      com/sdd/etl/
+        loader/          # DolphinDB data loader module
+          api/            # Loader interface and exceptions
+          config/         # Loader configuration parsing
+          dolphin/         # DolphinDB-specific implementation
+          annotation/      # @ColumnOrder annotation
+          model/          # TargetDataModel concrete classes
+    resources/
+      scripts/         # DolphinDB table scripts
+  test/
+    java/
+      com/sdd/etl/
+        loader/          # Loader tests
 ```
 
 ## Commands
@@ -27,7 +41,7 @@ tests/
 Java 8 (non-negotiable per Constitution): Follow standard conventions
 
 ## Recent Changes
-- 005-dolphindb-loader: Added Java 8 (non-negotiable per constitution) + DolphinDB Java API, Apache Commons CLI, Apache Commons Configuration (INI parsing), JUnit 4, Mockito, SLF4J + Logback (logging)
+- 005-dolphindb-loader: Completed DolphinDB loader implementation with @ColumnOrder annotations, shared connection management, and subprocess integration (2026-01-11)
 - 002-date-api-refactor: Added Java 8 (non-negotiable per constitution) + Apache Commons Configuration (INI parsing), JUnit 4 (testing), Maven wrapper
 - 001-cos-xbond-quote-extract: Added Java 8 (non-negotiable per Constitution) + Maven wrapper, Apache Commons CLI, Apache Commons Configuration (INI parsing), JUnit 4, Mockito, SLF4J + Logback (logging)
 

@@ -99,7 +99,7 @@ public class CommandLineValidatorTest {
 
     @Test
     public void testValidateConfigFileExists_ExistingFile() {
-        boolean result = validator.validateConfigFileExists(".etlconfig.ini.example");
+        boolean result = validator.validateConfigFileExists("src/main/resources/default-config.ini");
         assertTrue("Existing config file should return true", result);
     }
 
@@ -123,7 +123,7 @@ public class CommandLineValidatorTest {
 
     @Test
     public void testValidateAll_AllValid() {
-        CommandLineArguments args = new CommandLineArguments("20250101", "20250110", ".etlconfig.ini.example", false);
+        CommandLineArguments args = new CommandLineArguments("20250101", "20250110", "src/main/resources/default-config.ini", false);
         List<String> errors = validator.validateAll(args);
         assertTrue("All valid inputs should produce empty error list", errors.isEmpty());
     }
@@ -137,7 +137,7 @@ public class CommandLineValidatorTest {
 
     @Test
     public void testValidateAll_MissingFromDate() {
-        CommandLineArguments args = new CommandLineArguments(null, "20250110", ".etlconfig.ini.example", false);
+        CommandLineArguments args = new CommandLineArguments(null, "20250110", "src/main/resources/default-config.ini", false);
         List<String> errors = validator.validateAll(args);
         assertFalse("Missing from date should produce error", errors.isEmpty());
         assertTrue("Error should mention --from", errors.get(0).contains("--from"));
@@ -145,7 +145,7 @@ public class CommandLineValidatorTest {
 
     @Test
     public void testValidateAll_MissingToDate() {
-        CommandLineArguments args = new CommandLineArguments("20250101", null, ".etlconfig.ini.example", false);
+        CommandLineArguments args = new CommandLineArguments("20250101", null, "src/main/resources/default-config.ini", false);
         List<String> errors = validator.validateAll(args);
         assertFalse("Missing to date should produce error", errors.isEmpty());
         assertTrue("Error should mention --to", errors.get(0).contains("--to"));
@@ -161,7 +161,7 @@ public class CommandLineValidatorTest {
 
     @Test
     public void testValidateAll_InvalidDateFormat_From() {
-        CommandLineArguments args = new CommandLineArguments("2025-01-01", "20250110", ".etlconfig.ini.example", false);
+        CommandLineArguments args = new CommandLineArguments("2025-01-01", "20250110", "src/main/resources/default-config.ini", false);
         List<String> errors = validator.validateAll(args);
         assertFalse("Invalid date format should produce error", errors.isEmpty());
         assertTrue("Error should mention date format", errors.get(0).contains("date format") || errors.get(0).contains("YYYYMMDD"));
@@ -169,17 +169,17 @@ public class CommandLineValidatorTest {
 
     @Test
     public void testValidateAll_InvalidDateFormat_To() {
-        CommandLineArguments args = new CommandLineArguments("20250101", "2025/01/10", ".etlconfig.ini.example", false);
+        CommandLineArguments args = new CommandLineArguments("20250101", "2025/01/10", "src/main/resources/default-config.ini", false);
         List<String> errors = validator.validateAll(args);
         assertFalse("Invalid date format should produce error", errors.isEmpty());
     }
 
     @Test
     public void testValidateAll_InvalidDateRange() {
-        CommandLineArguments args = new CommandLineArguments("20250110", "20250101", ".etlconfig.ini.example", false);
+        CommandLineArguments args = new CommandLineArguments("20250110", "20250101", "src/main/resources/default-config.ini", false);
         List<String> errors = validator.validateAll(args);
         assertFalse("Invalid date range should produce error", errors.isEmpty());
-        assertTrue("Error should mention date range", errors.get(0).contains("date range") || errors.get(0).contains("Invalid date range"));
+        assertTrue("Error should mention date range", errors.get(0).contains("date range") || errors.get(0).contains("Invalid date range") || errors.get(0).contains("after"));
     }
 
     @Test

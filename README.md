@@ -71,6 +71,49 @@ cos.maxFileSize = 104857600  # 100MB in bytes
 java -jar target/sdd-etl-tool-*.jar --config .etlconfig.ini --date 20250101
 ```
 
+## DolphinDB Loader Feature
+
+The DolphinDB loader enables efficient data loading into DolphinDB time-series database with automatic sorting and table management. Key capabilities:
+
+### Supported Data Types
+- **Xbond Quote Data**: 83 fields → `xbond_quote_stream_temp` table
+- **Xbond Trade Data**: 15 fields → `xbond_trade_stream_temp` table  
+- **Bond Future Quote Data**: 96 fields → `fut_market_price_stream_temp` table
+
+### Core Features
+- **Automatic Sorting**: External merge sort for memory-efficient processing of large datasets
+- **Connection Management**: Shared connection pool with automatic reconnection
+- **Error Handling**: Comprehensive exception handling with forensic table preservation
+- **Performance Optimization**: Configurable memory limits and batch sizes
+
+### Configuration Example
+Add the following to your `.etlconfig.ini` file:
+
+```ini
+[loader]
+type = DOLPHINDB
+host = localhost
+port = 8848
+username = admin
+password = 123456
+
+# Sorting configuration
+sort.memory.limit = 512MB
+sort.buffer.size = 10000
+
+# Table configuration
+table.xbond.quote = xbond_quote_stream_temp
+table.xbond.trade = xbond_trade_stream_temp
+table.bond.future.quote = fut_market_price_stream_temp
+```
+
+### Usage
+The loader automatically handles:
+1. Data sorting by primary key/date fields
+2. Temporary table creation for data loading
+3. Data validation and type conversion
+4. Error recovery and logging
+
 ## COS Extraction Feature
 
 The COS extraction feature enables retrieval of Xbond Quote data from Tencent Cloud Object Storage. Key capabilities:
