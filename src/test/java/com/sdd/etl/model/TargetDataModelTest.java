@@ -1,102 +1,161 @@
 package com.sdd.etl.model;
 
+import com.sdd.etl.loader.annotation.ColumnOrder;
 import org.junit.Test;
-import org.junit.Before;
-
-import java.util.HashMap;
-import java.util.Map;
-
 import static org.junit.Assert.*;
 
+import java.util.List;
+
 /**
- * Unit tests for TargetDataModel abstract class.
+ * Unit tests for TargetDataModel.getOrderedFieldNames().
  */
 public class TargetDataModelTest {
 
-    private TargetDataModel model;
+    /**
+     * Test model with @ColumnOrder annotations.
+     */
+    private static class OrderedModel extends TargetDataModel {
+        @ColumnOrder(2)
+        private String fieldC;
 
-    @Before
-    public void setUp() {
-        // Create anonymous subclass for testing
-        model = new TargetDataModel() {
-            @Override
-            public boolean validate() {
-                return true;
-            }
+        @ColumnOrder(0)
+        private String fieldA;
 
-            @Override
-            public Object toTargetFormat() {
-                return new HashMap<>();
-            }
+        @ColumnOrder(1)
+        private String fieldB;
 
-            @Override
-            public String getTargetType() {
-                return "test_target";
-            }
-        };
+        private String fieldD; // No annotation
+
+        @Override
+        public boolean validate() {
+            return true;
+        }
+
+        @Override
+        public Object toTargetFormat() {
+            return null;
+        }
+
+        @Override
+        public String getTargetType() {
+            return "test";
+        }
+
+        @Override
+        public String getDataType() {
+            return "TEST_DATA";
+        }
+    }
+
+    /**
+     * Test model without @ColumnOrder annotations.
+     */
+    private static class UnorderedModel extends TargetDataModel {
+        private String fieldA;
+        private String fieldB;
+        private String fieldC;
+
+        @Override
+        public boolean validate() {
+            return true;
+        }
+
+        @Override
+        public Object toTargetFormat() {
+            return null;
+        }
+
+        @Override
+        public String getTargetType() {
+            return "test";
+        }
+
+        @Override
+        public String getDataType() {
+            return "TEST_DATA";
+        }
+    }
+
+    /**
+     * Test model with only ordered fields.
+     */
+    private static class FullyOrderedModel extends TargetDataModel {
+        @ColumnOrder(1)
+        private String fieldB;
+
+        @ColumnOrder(0)
+        private String fieldA;
+
+        @Override
+        public boolean validate() {
+            return true;
+        }
+
+        @Override
+        public Object toTargetFormat() {
+            return null;
+        }
+
+        @Override
+        public String getTargetType() {
+            return "test";
+        }
+
+        @Override
+        public String getDataType() {
+            return "TEST_DATA";
+        }
     }
 
     @Test
-    public void testGetMetadata_ReturnsMap() {
-        Map<String, Object> metadata = new HashMap<>();
-        metadata.put("field1", "value1");
-        model.setMetadata(metadata);
+    public void testGetOrderedFieldNamesWithPartialOrdering() {
+        OrderedModel model = new OrderedModel();
+        List<String> ordered = model.getOrderedFieldNames();
 
-        Map<String, Object> result = model.getMetadata();
-        assertNotNull("Metadata should not be null", result);
-        assertEquals("Metadata should match", metadata, result);
+        assertEquals("Should return 3 fields (only annotated)", 3, ordered.size());
+        assertEquals("First field should be fieldA (order 0)", "fieldA", ordered.get(0));
+        assertEquals("Second field should be fieldB (order 1)", "fieldB", ordered.get(1));
+        assertEquals("Third field should be fieldC (order 2)", "fieldC", ordered.get(2));
+        // fieldD has no annotation and should be ignored
+        assertFalse("Should not contain fieldD (no annotation)", ordered.contains("fieldD"));
     }
 
     @Test
-    public void testSetMetadata_NullValue_SetsNull() {
-        model.setMetadata(null);
+    public void testGetOrderedFieldNamesWithoutOrdering() {
+        UnorderedModel model = new UnorderedModel();
+        List<String> ordered = model.getOrderedFieldNames();
 
-        Map<String, Object> result = model.getMetadata();
-        assertNull("Metadata should be null", result);
+        assertEquals("Should return 0 fields (no annotations)", 0, ordered.size());
+        // Without annotations, all fields are ignored per design requirement
     }
 
     @Test
-    public void testGetRecords_ReturnsRecords() {
-        Map<String, Object> record1 = new HashMap<>();
-        record1.put("id", "1");
-        record1.put("name", "Test");
+    public void testGetOrderedFieldNamesWithFullOrdering() {
+        FullyOrderedModel model = new FullyOrderedModel();
+        List<String> ordered = model.getOrderedFieldNames();
 
-        java.util.List<Map<String, Object>> records = new java.util.ArrayList<>();
-        records.add(record1);
-
-        model.setRecords(records);
-
-        java.util.List<Map<String, Object>> result = model.getRecords();
-        assertNotNull("Records should not be null", result);
-        assertEquals("Records should match", records, result);
+        assertEquals("Should return 2 fields", 2, ordered.size());
+        assertEquals("First field should be fieldA (order 0)", "fieldA", ordered.get(0));
+        assertEquals("Second field should be fieldB (order 1)", "fieldB", ordered.get(1));
     }
 
     @Test
-    public void testSetRecords_NullValue_SetsNull() {
-        model.setRecords(null);
+    public void testGetOrderedFieldNamesReturnsModifiableList() {
+        OrderedModel model = new OrderedModel();
+        List<String> ordered = model.getOrderedFieldNames();
 
-        java.util.List<Map<String, Object>> result = model.getRecords();
-        assertNull("Records should be null", result);
+        ordered.add("newField");
+
+        assertEquals("List should be modifiable", 4, ordered.size());
     }
 
     @Test
-    public void testValidate_AbstractMethod_MustBeImplemented() {
-        // Test is implemented in setUp() method
-        boolean result = model.validate();
-        assertTrue("Validate method should work", result);
-    }
+    public void testGetOrderedFieldNamesIsRepeatable() {
+        OrderedModel model = new OrderedModel();
 
-    @Test
-    public void testToTargetFormat_AbstractMethod_MustBeImplemented() {
-        // Test is implemented in setUp() method
-        Object result = model.toTargetFormat();
-        assertNotNull("Target format should not be null", result);
-    }
+        List<String> firstCall = model.getOrderedFieldNames();
+        List<String> secondCall = model.getOrderedFieldNames();
 
-    @Test
-    public void testGetTargetType_AbstractMethod_MustBeImplemented() {
-        // Test is implemented in setUp() method
-        String result = model.getTargetType();
-        assertNotNull("Target type should not be null", result);
+        assertEquals("Subsequent calls should return same result", firstCall, secondCall);
     }
 }

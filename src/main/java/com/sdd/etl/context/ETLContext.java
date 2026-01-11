@@ -266,4 +266,43 @@ public class ETLContext {
     public void clear() {
         data.clear();
     }
+
+    // DolphinDB connection management methods
+
+    /**
+     * Gets the shared DolphinDB connection instance.
+     *
+     * @return DolphinDB connection object, or null if not set
+     */
+    public Object getDolphinDBConnection() {
+        return data.get(ContextConstants.DOLPHINDB_CONNECTION);
+    }
+
+    /**
+     * Sets the shared DolphinDB connection instance.
+     * This connection is shared between LoadSubprocess and CleanSubprocess.
+     *
+     * @param connection DolphinDB connection object
+     */
+    public void setDolphinDBConnection(Object connection) {
+        data.put(ContextConstants.DOLPHINDB_CONNECTION, connection);
+    }
+
+    /**
+     * Gets the DolphinDB loader instance.
+     *
+     * @return DolphinDBLoader object, or null if not set
+     */
+    public Object getDolphinDBLoader() {
+        return data.get(ContextConstants.DOLPHINDB_LOADER);
+    }
+
+    /**
+     * Sets the DolphinDB loader instance.
+     *
+     * @param loader DolphinDBLoader object
+     */
+    public void setDolphinDBLoader(Object loader) {
+        data.put(ContextConstants.DOLPHINDB_LOADER, loader);
+    }
 }

@@ -68,6 +68,17 @@ public class ContextConstants {
      */
     public static final String CLEANUP_PERFORMED = "cleanupPerformed";
 
+    // DolphinDB loader data
+    /**
+     * Key for the shared DolphinDB connection instance
+     */
+    public static final String DOLPHINDB_CONNECTION = "dolphinDBConnection";
+
+    /**
+     * Key for the DolphinDB loader instance
+     */
+    public static final String DOLPHINDB_LOADER = "dolphinDBLoader";
+
     // Private constructor to prevent instantiation
     private ContextConstants() {
         throw new UnsupportedOperationException("Utility class cannot be instantiated");

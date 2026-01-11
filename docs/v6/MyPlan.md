@@ -13,7 +13,7 @@ What we need to do in this phase include:
 
 ## II. Provide an extension of `LoadSubprocess` for DolphinDB to load data
 1. `LoadSubprocess` **MUST** execute temporary table creation script via DolphinDB Java API **BEFORE** data loading
-2. The script had been provided in `@docs/v6/temporary_table_creation.dos`
+2. The script had been provided in `@docs/v6/temporary_table_creation.dos`. You **MUST** read scripts from resources file at runtime.
 3. Retrieve transformed data from `ETLContext` and pass it to embedded DolphinDB Data Loader.
 
 ## III. Provide an abstract DolphinDB `TargetDataModel`
@@ -240,6 +240,13 @@ What we need to do in this phase include:
 | 95 | tick_type | SYMBOL |
 | 96 | receive_time | TIMESTAMP |
 ```
+
+## VIII. Delete all crated temporary tables in clean up sub process
+1. Temporary tables deletion **MUST** be executed in `CleanSubprocess`
+2. Temporary tables deletion **MUST** be implemented by invocation DolphinDB Java API to execute script
+3. The script to delete temporary tables **MUST** use the one in `@docs/v6/temporary_table_deletion.dos`
+4. You **MUST** read script from resources file at the runtime.
+
 ## Reference Documents
 
 Document regarding Tencent COS **FOR YOUR INFORMATION**, you **CAN** also research by yourself.

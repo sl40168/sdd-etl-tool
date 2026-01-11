@@ -27,12 +27,7 @@ public class LoadSubprocessTest {
 
     @Test
     public void testValidateContext_TransformedDataMissing_Throws() {
-        LoadSubprocess load = new LoadSubprocess() {
-            @Override
-            public int execute(ETLContext context) throws ETLException {
-                return 0;
-            }
-        };
+        LoadSubprocess load = new LoadSubprocess();
 
         // transformedData is null by default
         try {
@@ -44,22 +39,18 @@ public class LoadSubprocessTest {
     }
 
     @Test
-    public void testValidateContext_TargetsEmpty_Throws() {
-        LoadSubprocess load = new LoadSubprocess() {
-            @Override
-            public int execute(ETLContext context) throws ETLException {
-                return 0;
-            }
-        };
+    public void testValidateContext_ConfigMissing_Throws() {
+        LoadSubprocess load = new LoadSubprocess();
 
         context.setTransformedData(new Object());
+        context.setConfig(null);  // config is null
 
-        // targets list empty by default
+        // Should throw exception due to missing config
         try {
             load.validateContext(context);
             fail("Expected ETLException");
         } catch (ETLException e) {
-            assertTrue(e.getMessage().contains("No data targets configured"));
+            assertTrue(e.getMessage().contains("No ETL configuration found"));
         }
     }
 
@@ -77,12 +68,7 @@ public class LoadSubprocessTest {
 
     @Test
     public void testImplementsSubprocessInterface() {
-        LoadSubprocess load = new LoadSubprocess() {
-            @Override
-            public int execute(ETLContext context) throws ETLException {
-                return 0;
-            }
-        };
+        LoadSubprocess load = new LoadSubprocess();
 
         assertTrue("LoadSubprocess should implement SubprocessInterface", load instanceof SubprocessInterface);
     }
