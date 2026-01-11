@@ -16,7 +16,7 @@ public class RawTradeRecord {
     private Double tradeYield;
     private String tradeYieldType;
     private Long tradeVolume;
-    private String counterparty;
+    private String tradeSide;
     private String tradeId;
     private LocalDateTime transactTime;
     private Long mqOffset;
@@ -32,9 +32,9 @@ public class RawTradeRecord {
      * Constructs a RawTradeRecord with all fields.
      */
     public RawTradeRecord(Long id, String underlyingSecurityId, Integer underlyingSettlementType,
-                          Double tradePrice, Double tradeYield, String tradeYieldType,
-                          Long tradeVolume, String counterparty, String tradeId,
-                          LocalDateTime transactTime, Long mqOffset, LocalDateTime recvTime) {
+            Double tradePrice, Double tradeYield, String tradeYieldType,
+            Long tradeVolume, String tradeSide, String tradeId,
+            LocalDateTime transactTime, Long mqOffset, LocalDateTime recvTime) {
         this.id = id;
         this.underlyingSecurityId = underlyingSecurityId;
         this.underlyingSettlementType = underlyingSettlementType;
@@ -42,7 +42,7 @@ public class RawTradeRecord {
         this.tradeYield = tradeYield;
         this.tradeYieldType = tradeYieldType;
         this.tradeVolume = tradeVolume;
-        this.counterparty = counterparty;
+        this.tradeSide = tradeSide;
         this.tradeId = tradeId;
         this.transactTime = transactTime;
         this.mqOffset = mqOffset;
@@ -105,12 +105,12 @@ public class RawTradeRecord {
         this.tradeVolume = tradeVolume;
     }
 
-    public String getCounterparty() {
-        return counterparty;
+    public String getTradeSide() {
+        return tradeSide;
     }
 
-    public void setCounterparty(String counterparty) {
-        this.counterparty = counterparty;
+    public void setTradeSide(String tradeSide) {
+        this.tradeSide = tradeSide;
     }
 
     public String getTradeId() {
@@ -150,6 +150,7 @@ public class RawTradeRecord {
      * Required: underlyingSecurityId (non-empty),
      * underlyingSettlementType (0 or 1),
      * transactTime (non-null).
+     * 
      * @return true if valid
      */
     public boolean isValid() {
@@ -167,8 +168,10 @@ public class RawTradeRecord {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         RawTradeRecord that = (RawTradeRecord) o;
         return Objects.equals(id, that.id) &&
                 Objects.equals(underlyingSecurityId, that.underlyingSecurityId) &&
@@ -177,7 +180,7 @@ public class RawTradeRecord {
                 Objects.equals(tradeYield, that.tradeYield) &&
                 Objects.equals(tradeYieldType, that.tradeYieldType) &&
                 Objects.equals(tradeVolume, that.tradeVolume) &&
-                Objects.equals(counterparty, that.counterparty) &&
+                Objects.equals(tradeSide, that.tradeSide) &&
                 Objects.equals(tradeId, that.tradeId) &&
                 Objects.equals(transactTime, that.transactTime) &&
                 Objects.equals(mqOffset, that.mqOffset) &&
@@ -188,7 +191,7 @@ public class RawTradeRecord {
     public int hashCode() {
         return Objects.hash(id, underlyingSecurityId, underlyingSettlementType,
                 tradePrice, tradeYield, tradeYieldType, tradeVolume,
-                counterparty, tradeId, transactTime, mqOffset, recvTime);
+                tradeSide, tradeId, transactTime, mqOffset, recvTime);
     }
 
     @Override
@@ -201,7 +204,7 @@ public class RawTradeRecord {
                 ", tradeYield=" + tradeYield +
                 ", tradeYieldType='" + tradeYieldType + '\'' +
                 ", tradeVolume=" + tradeVolume +
-                ", counterparty='" + counterparty + '\'' +
+                ", tradeSide='" + tradeSide + '\'' +
                 ", tradeId='" + tradeId + '\'' +
                 ", transactTime=" + transactTime +
                 ", mqOffset=" + mqOffset +

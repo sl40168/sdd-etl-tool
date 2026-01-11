@@ -148,7 +148,7 @@ sdd-etl-tool/
 - **File**: `src/main/java/com/sdd/etl/source/extract/cos/XbondTradeExtractor.java`
 - **Extends**: `CosExtractor`
 - **Key Methods**:
-  - `getCategory()`: Returns `"TradeData"` (configurable)
+  - `getCategory()`: Returns `"XbondCfetsDeal"` (configurable)
   - `parseCsvFile(File csvFile)`: Uses `CsvParser` with trade-specific field mapping
   - `convertRawRecords(List<RawTradeRecord> rawRecords)`:
     - Groups records by `mqOffset`
@@ -161,7 +161,7 @@ sdd-etl-tool/
 #### 2.2 Update ExtractorFactory
 - **File**: `src/main/java/com/sdd/etl/source/extract/ExtractorFactory.java`
 - **Modify**: `createCosExtractor()` method (lines 85-99)
-- **Add**: Case for `"TradeData"` category
+- **Add**: Case for `"XbondCfetsDeal"` category
 - **Create**: `XbondTradeExtractor` instance
 - **Verify**: Category match between configuration and extractor
 
@@ -322,7 +322,7 @@ sdd-etl-tool/
 ```ini
 [sources.xbond_trade]
 type = cos
-category = TradeData
+category = XbondCfetsDeal
 cos.endpoint = https://cos.ap-beijing.myqcloud.com
 cos.bucket = xbond-data-prod
 cos.region = ap-beijing
@@ -338,7 +338,7 @@ cos.maxFileSize = 104857600  # 100MB in bytes
 // Example context setup for trade extraction
 ETLContext context = new ETLContext();
 context.setCurrentDate(LocalDate.of(2025, 1, 1));  // YYYY-MM-DD
-context.setCategoryFilter("TradeData");
+context.setCategoryFilter("XbondCfetsDeal");
 context.setSourceType("cos");
 ```
 

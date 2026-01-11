@@ -11,10 +11,11 @@ This document specifies the data models for the Xbond Trade extraction feature. 
 │                     Extractor Workflow                       │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  CSV Files → RawTradeRecord → XbondTradeDataModel           │
+│  CSV Row (1:1) → RawTradeRecord (1:1) → XbondTradeDataModel  │
 │                                                             │
-│  • CSV Parsing → RawTradeRecord (intermediate)              │
-│  • Business Rules → XbondTradeDataModel (standardized)      │
+│  • Each CSV row creates ONE RawTradeRecord                  │
+│  • Each RawTradeRecord converts to ONE XbondTradeDataModel  │
+│  • Simple one-to-one mapping throughout                    │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -29,20 +30,28 @@ Intermediate representation of parsed CSV trade data. Acts as a bridge between r
 
 ### Fields
 
-| Field Name | Type | Required | Description | Validation |
-|------------|------|----------|-------------|------------|
-| `id` | `Long` | No | Unique record identifier | Optional |
-| `underlyingSecurityId` | `String` | **Yes** | Bond security identifier | Non-empty string |
-| `underlyingSettlementType` | `Integer` | **Yes** | Settlement type | 0 (T+0) or 1 (T+1) |
-| `tradePrice` | `Double` | **Yes** | Executed trade price | > 0.0 |
-| `tradeYield` | `Double` | No | Trade yield (if applicable) | Optional, ≥ 0.0 |
-| `tradeYieldType` | `String` | No | Yield calculation type | Optional |
-| `tradeVolume` | `Long` | **Yes** | Trade volume/quantity | > 0 |
-| `counterparty` | `String` | No | Counterparty identifier | Optional |
-| `tradeId` | `String` | **Yes** | Unique trade identifier | Non-empty string |
-| `transactTime` | `LocalDateTime` | **Yes** | Trade execution timestamp | Valid timestamp |
-| `mqOffset` | `Long` | **Yes** | Message queue offset (primary grouping key) | ≥ 0 |
-| `recvTime` | `LocalDateTime` | **Yes** | System receive timestamp | Valid timestamp |
+**Note**: The actual CSV contains more columns than stored in RawTradeRecord. Only fields needed for output mapping are stored.
+
+| Field Name | Type | Required | CSV Column | Description | Validation |
+|------------|------|----------|------------|-------------|------------|
+| `id` | `Long` | No | `id` | Unique record identifier (no business meaning) | Optional |
+| `underlyingSecurityId` | `String` | **Yes** | `bond_key` | Bond security identifier (e.g., "250210.IB") | Non-empty string, ends with ".IB" |
+| `underlyingSettlementType` | `Integer` | **Yes** | `set_days` | Settlement type (mapped from "T+0"/"T+1") | 0 (T+0) or 1 (T+1) |
+| `tradePrice` | `Double` | No | `net_price` | Clean price of the deal | Optional, > 0.0 if present |
+| `tradeYield` | `Double` | No | `yield` | Trade yield | Optional, ≥ 0.0 if present |
+| `tradeYieldType` | `String` | No | `yield_type` | Yield calculation type | Optional |
+| `tradeVolume` | `Long` | No | `deal_size` | Trade volume/quantity | Optional, > 0 if present |
+| `tradeSide` | `String` | No | `side` | Trade direction/side (X=Taken, Y=Given, Z=Trade, D=Done) | Optional, raw values from CSV |
+| `tradeId` | `String` | No | `hlid` | Unique trade identifier | Optional |
+| `transactTime` | `LocalDateTime` | **Yes** | `deal_time` | Trade execution timestamp | Valid timestamp, format: "yyyy-MM-dd HH:mm:ss.SSS" |
+| `recvTime` | `LocalDateTime` | No | `recv_time` | System receive timestamp | Optional (added later), format: "yyyy-MM-dd HH:mm:ss.SSS" |
+
+**Ignored CSV Columns** (not stored in RawTradeRecord):
+- `bond_code`: Redundant (bond_key already has full ID)
+- `symbol`: Short name, not needed
+- `act_dt`, `act_tm`: Redundant (deal_time contains full timestamp)
+- `pre_market`: Always 0, no business value
+- `trade_method`: Not needed for output
 
 ### Methods
 
@@ -50,12 +59,9 @@ Intermediate representation of parsed CSV trade data. Acts as a bridge between r
 Validates the record according to business rules:
 1. `underlyingSecurityId` must be non-null and non-empty
 2. `underlyingSettlementType` must be 0 or 1
-3. `tradePrice` must be > 0.0
-4. `tradeVolume` must be > 0
-5. `tradeId` must be non-null and non-empty
-6. `transactTime` must be non-null
-7. `mqOffset` must be non-null and ≥ 0
-8. `recvTime` must be non-null
+3. `transactTime` must be non-null
+
+**Note**: The actual implementation has minimal validation. Fields like `tradePrice`, `tradeVolume`, `tradeId`, `mqOffset`, and `recvTime` are optional in RawTradeRecord and validated later in XbondTradeDataModel.
 
 #### Standard Methods
 - Default constructor
@@ -94,12 +100,12 @@ Standardized trade data model extending `SourceDataModel`. Represents processed 
 
 | Field Name | Type | Initial Value | Required | Description |
 |------------|------|---------------|----------|-------------|
-| `tradePrice` | `Double` | `Double.NaN` | **Yes** | Executed trade price |
-| `tradeYield` | `Double` | `Double.NaN` | No | Trade yield (if applicable) |
+| `tradePrice` | `Double` | `Double.NaN` | No | Executed trade price (net_price from CSV) |
+| `tradeYield` | `Double` | `Double.NaN` | No | Trade yield |
 | `tradeYieldType` | `String` | `null` | No | Yield calculation type |
-| `tradeVolume` | `Long` | `null` | **Yes** | Trade volume/quantity |
-| `counterparty` | `String` | `null` | No | Counterparty identifier |
-| `tradeId` | `String` | `null` | **Yes** | Unique trade identifier |
+| `tradeVolume` | `Long` | `null` | No | Trade volume/quantity (deal_size from CSV) |
+| `tradeSide` | `String` | `null` | No | Trade direction/side (mapped from CSV: X→TKN, Y→GVN, Z→TRD, D→DONE) |
+| `tradeId` | `String` | `null` | **Yes** | Unique trade identifier (hlid from CSV) |
 | `eventTime` | `LocalDateTime` | `null` | **Yes** | Trade execution timestamp |
 | `receiveTime` | `LocalDateTime` | `null` | **Yes** | System receive timestamp |
 
@@ -169,51 +175,54 @@ public XbondTradeDataModel() {
 
 | CSV Column | RawTradeRecord Field | Transformation | Notes |
 |------------|----------------------|----------------|-------|
-| `id` | `id` | `Long.parseLong()` | Optional, may be null |
-| `underlying_security_id` | `underlyingSecurityId` | `String.trim()` | Required |
-| `underlying_settlement_type` | `underlyingSettlementType` | `Integer.parseInt()` | Must be 0 or 1 |
-| `trade_price` | `tradePrice` | `Double.parseDouble()` | Required, > 0 |
-| `trade_yield` | `tradeYield` | `Double.parseDouble()` | Optional |
-| `trade_yield_type` | `tradeYieldType` | `String.trim()` | Optional |
-| `trade_volume` | `tradeVolume` | `Long.parseLong()` | Required, > 0 |
-| `counterparty` | `counterparty` | `String.trim()` | Optional |
-| `trade_id` | `tradeId` | `String.trim()` | Required |
-| `transact_time` | `transactTime` | `LocalDateTime.parse("yyyyMMdd-HH:mm:ss.SSS")` | Required |
-| `mq_offset` | `mqOffset` | `Long.parseLong()` | Required, ≥ 0 |
-| `recv_time` | `recvTime` | `LocalDateTime.parse("yyyyMMdd-HH:mm:ss.SSS")` | Required |
+| `id` | `id` | `Long.parseLong()` | Optional, no business meaning |
+| `bond_key` | `underlyingSecurityId` | `String.trim()` | Required, already ends with ".IB" |
+| `bond_code` | *(ignored)* | - | Redundant |
+| `symbol` | *(ignored)* | - | Not needed |
+| `deal_time` | `transactTime` | `LocalDateTime.parse("yyyy-MM-dd HH:mm:ss.SSS")` | Required |
+| `act_dt` | *(ignored)* | - | Redundant |
+| `act_tm` | *(ignored)* | - | Redundant |
+| `pre_market` | *(ignored)* | - | Always 0 |
+| `trade_method` | *(ignored)* | - | Not needed |
+| `side` | `counterparty` | `String.trim()` | Optional, X/Y/Z/D |
+| `net_price` | `tradePrice` | `Double.parseDouble()` | Optional, clean price |
+| `set_days` | `underlyingSettlementType` | Map "T+0"→0, "T+1"→1 | Required |
+| `yield` | `tradeYield` | `Double.parseDouble()` | Optional |
+| `yield_type` | `tradeYieldType` | `String.trim()` | Optional |
+| `deal_size` | `tradeVolume` | `Long.parseLong()` | Optional |
+| `recv_time` | `recvTime` | `LocalDateTime.parse("yyyy-MM-dd HH:mm:ss.SSS")` | Optional (added later) |
+| `hlid` | `tradeId` | `String.trim()` | Optional, unique deal ID |
 
 ### RawTradeRecord to XbondTradeDataModel Mapping
 
 | RawTradeRecord Field | XbondTradeDataModel Field | Business Rule | Example |
 |----------------------|---------------------------|---------------|---------|
-| `underlyingSecurityId` | `exchProductId` | Add ".IB" suffix if not present | "1021001" → "1021001.IB" |
-| `underlyingSettlementType` | `settleSpeed` | 0 → 0 (T+0), 1 → 1 (T+1) | 1 → 1 |
-| `tradePrice` | `tradePrice` | Direct mapping | 100.5 → 100.5 |
-| `tradeYield` | `tradeYield` | Direct mapping | 2.5 → 2.5 |
-| `tradeYieldType` | `tradeYieldType` | Direct mapping | "YTM" → "YTM" |
-| `tradeVolume` | `tradeVolume` | Direct mapping | 1000 → 1000 |
-| `counterparty` | `counterparty` | Direct mapping | "C001" → "C001" |
-| `tradeId` | `tradeId` | Direct mapping | "T123" → "T123" |
-| `transactTime` | `eventTime` | Direct mapping | 2025-01-01T10:30:00 |
-| `recvTime` | `receiveTime` | Direct mapping | 2025-01-01T10:30:05 |
-| (Context Date) | `businessDate` | Format `YYYYMMDD` → `YYYY.MM.DD` | "20250101" → "2025.01.01" |
+| `underlyingSecurityId` | `exchProductId` | Direct mapping (already has ".IB") | "250210.IB" → "250210.IB" |
+| `underlyingSettlementType` | `settleSpeed` | Direct mapping | 0 → 0 (T+0), 1 → 1 (T+1) |
+| `tradePrice` | `tradePrice` | Direct mapping | 98.4289 → 98.4289 |
+| `tradeYield` | `tradeYield` | Direct mapping | 1.9875 → 1.9875 |
+| `tradeYieldType` | `tradeYieldType` | Direct mapping | "1" → "1" |
+| `tradeVolume` | `tradeVolume` | Direct mapping | 5000 → 5000 |
+| `tradeSide` | `tradeSide` | Map: X→TKN, Y→GVN, Z→TRD, D→DONE | "Y" → "GVN" |
+| `tradeId` | `tradeId` | Direct mapping | "4455380029616468" → "4455380029616468" |
+| `transactTime` | `eventTime` | Direct mapping | 2026-01-05T10:07:45.068 |
+| `recvTime` | `receiveTime` | Direct mapping, or copy from eventTime if null | 2026-01-05T10:07:45.102 |
+| (Context Date) | `businessDate` | Format `YYYYMMDD` → `YYYY.MM.DD` | "20260105" → "2026.01.05" |
+
+**Note**: The trade direction mapping (X→TKN/Taken, Y→GVN/Given, Z→TRD/Trade, D→DONE) is applied in the extractor during conversion from RawTradeRecord to XbondTradeDataModel.
 
 ## Validation Rules Summary
 
 ### RawTradeRecord Validation
 
-1. **Basic Validation**:
+1. **Basic Validation** (from `isValid()` method):
    - `underlyingSecurityId` ≠ null, ≠ empty
    - `underlyingSettlementType` ∈ {0, 1}
-   - `tradePrice` > 0.0
-   - `tradeVolume` > 0
-   - `tradeId` ≠ null, ≠ empty
    - `transactTime` ≠ null
-   - `mqOffset` ≥ 0
-   - `recvTime` ≠ null
 
 2. **Optional Fields**:
-   - `id`, `tradeYield`, `tradeYieldType`, `counterparty` may be null
+   - `id`, `tradePrice`, `tradeYield`, `tradeYieldType`, `tradeVolume`, `tradeSide`, `tradeId`, `recvTime` may be null
+   - These fields are validated later in XbondTradeDataModel
 
 ### XbondTradeDataModel Validation
 
@@ -240,18 +249,18 @@ public XbondTradeDataModel() {
 
 ```java
 RawTradeRecord record = new RawTradeRecord(
-    12345L,                          // id
-    "1021001",                       // underlyingSecurityId
-    1,                               // underlyingSettlementType
-    100.5,                           // tradePrice
-    2.5,                             // tradeYield
-    "YTM",                           // tradeYieldType
-    1000L,                           // tradeVolume
-    "C001",                          // counterparty
-    "T20250101-001",                 // tradeId
-    LocalDateTime.parse("2025-01-01T10:30:00"), // transactTime
-    500L,                            // mqOffset
-    LocalDateTime.parse("2025-01-01T10:30:05")  // recvTime
+    11568725L,                       // id
+    "250210.IB",                     // underlyingSecurityId (bond_key)
+    1,                               // underlyingSettlementType (T+1)
+    98.4289,                         // tradePrice (net_price)
+    1.9875,                          // tradeYield
+    "1",                             // tradeYieldType
+    5000L,                           // tradeVolume (deal_size)
+    "Y",                             // counterparty (side)
+    "4455380029616468",              // tradeId (hlid)
+    LocalDateTime.parse("2026-01-05T10:07:45.068"), // transactTime (deal_time)
+    null,                            // mqOffset (internal)
+    LocalDateTime.parse("2026-01-05T10:07:45.102")  // recvTime
 );
 ```
 
@@ -259,33 +268,35 @@ RawTradeRecord record = new RawTradeRecord(
 
 ```java
 XbondTradeDataModel model = new XbondTradeDataModel();
-model.setBusinessDate("2025.01.01");
-model.setExchProductId("1021001.IB");
-model.setSettleSpeed(1);
-model.setTradePrice(100.5);
-model.setTradeYield(2.5);
-model.setTradeYieldType("YTM");
-model.setTradeVolume(1000L);
-model.setCounterparty("C001");
-model.setTradeId("T20250101-001");
-model.setEventTime(LocalDateTime.parse("2025-01-01T10:30:00"));
-model.setReceiveTime(LocalDateTime.parse("2025-01-01T10:30:05"));
+model.setBusinessDate("2026.01.05");
+model.setExchProductId("250210.IB");
+model.setSettleSpeed(1);  // T+1
+model.setTradePrice(98.4289);
+model.setTradeYield(1.9875);
+model.setTradeYieldType("1");
+model.setTradeVolume(5000L);
+model.setCounterparty("Y");  // Raw value, not mapped
+model.setTradeId("4455380029616468");
+model.setEventTime(LocalDateTime.parse("2026-01-05T10:07:45.068"));
+model.setReceiveTime(LocalDateTime.parse("2026-01-05T10:07:45.102"));
 ```
 
 ## Integration Notes
 
 ### CSV Parsing
 
-- Use existing `CsvParser` utility with trade-specific field mapping
-- CSV files expected to have header row with exact column names
-- UTF-8 encoding, comma-separated values
-- Timestamps in `yyyyMMdd-HH:mm:ss.SSS` format
+- Use existing `TradeCsvParser` utility with trade-specific field mapping
+- CSV files expected to have header row with exact column names: `id`, `bond_key`, `bond_code`, `symbol`, `deal_time`, `act_dt`, `act_tm`, `pre_market`, `trade_method`, `side`, `net_price`, `set_days`, `yield`, `yield_type`, `deal_size`, `recv_time`, `hlid`
+- UTF-8 encoding, pipe-separated values (`|`)
+- Timestamps in `yyyy-MM-dd HH:mm:ss.SSS` format (e.g., "2026-01-05 10:07:45.068")
+- Settlement speed as string: "T+0" or "T+1" (mapped to 0 or 1)
 
 ### Data Transformation
 
-1. **Grouping**: Group `RawTradeRecord` instances by `mqOffset`
-2. **Mapping**: Apply business rules to transform raw records to standardized model
+1. **One-to-One Mapping**: Each `RawTradeRecord` is converted to exactly one `XbondTradeDataModel`
+2. **Field Mapping**: Apply business rules to transform raw fields to standardized model fields
 3. **Validation**: Validate each `XbondTradeDataModel` instance before output
+4. **Trade Side Mapping**: The trade direction (X/Y/Z/D) is mapped to standardized values (TKN/GVN/TRD/DONE)
 
 ### Error Handling
 
