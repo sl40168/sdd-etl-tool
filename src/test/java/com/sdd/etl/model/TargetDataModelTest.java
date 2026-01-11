@@ -112,11 +112,12 @@ public class TargetDataModelTest {
         OrderedModel model = new OrderedModel();
         List<String> ordered = model.getOrderedFieldNames();
 
-        assertEquals("Should return 4 fields", 4, ordered.size());
+        assertEquals("Should return 3 fields (only annotated)", 3, ordered.size());
         assertEquals("First field should be fieldA (order 0)", "fieldA", ordered.get(0));
         assertEquals("Second field should be fieldB (order 1)", "fieldB", ordered.get(1));
         assertEquals("Third field should be fieldC (order 2)", "fieldC", ordered.get(2));
-        assertEquals("Fourth field should be fieldD (no annotation)", "fieldD", ordered.get(3));
+        // fieldD has no annotation and should be ignored
+        assertFalse("Should not contain fieldD (no annotation)", ordered.contains("fieldD"));
     }
 
     @Test
@@ -124,11 +125,8 @@ public class TargetDataModelTest {
         UnorderedModel model = new UnorderedModel();
         List<String> ordered = model.getOrderedFieldNames();
 
-        assertEquals("Should return 3 fields", 3, ordered.size());
-        // Without annotations, fields are in natural order
-        assertTrue("Should contain fieldA", ordered.contains("fieldA"));
-        assertTrue("Should contain fieldB", ordered.contains("fieldB"));
-        assertTrue("Should contain fieldC", ordered.contains("fieldC"));
+        assertEquals("Should return 0 fields (no annotations)", 0, ordered.size());
+        // Without annotations, all fields are ignored per design requirement
     }
 
     @Test
@@ -148,7 +146,7 @@ public class TargetDataModelTest {
 
         ordered.add("newField");
 
-        assertEquals("List should be modifiable", 5, ordered.size());
+        assertEquals("List should be modifiable", 4, ordered.size());
     }
 
     @Test

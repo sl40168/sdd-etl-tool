@@ -102,7 +102,6 @@ public abstract class TargetDataModel {
 
         // Collect fields with their order values
         Map<Integer, String> orderedFields = new TreeMap<>();
-        List<String> unorderedFields = new ArrayList<>();
 
         for (Field field : fields) {
             // Skip synthetic fields (compiler-generated)
@@ -113,15 +112,10 @@ public abstract class TargetDataModel {
             ColumnOrder annotation = field.getAnnotation(ColumnOrder.class);
             if (annotation != null) {
                 orderedFields.put(annotation.value(), field.getName());
-            } else {
-                unorderedFields.add(field.getName());
             }
+            // Fields without @ColumnOrder annotation are ignored per design requirement
         }
 
-        // Combine ordered and unordered fields
-        List<String> result = new ArrayList<>(orderedFields.values());
-        result.addAll(unorderedFields);
-
-        return result;
+        return new ArrayList<>(orderedFields.values());
     }
 }
