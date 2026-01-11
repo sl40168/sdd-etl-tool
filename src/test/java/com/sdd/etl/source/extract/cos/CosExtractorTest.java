@@ -52,7 +52,7 @@ public class CosExtractorTest {
      * <p>Provides stub implementations of abstract methods that can be
      * configured for different test scenarios.</p>
      */
-    private static class TestConcreteExtractor extends CosExtractor {
+    private static class TestConcreteExtractor extends CosExtractor<RawQuoteRecord> {
         
         private String category = "TEST";
         private CosClient testCosClient;
@@ -183,7 +183,7 @@ public class CosExtractorTest {
     public void testParseCsvFile_DefaultImplementationThrowsETLException() {
         // Create a concrete extractor but don't override parseCsvFile
         // Use a new anonymous class that doesn't override parseCsvFile
-        CosExtractor noOverrideExtractor = new CosExtractor() {
+        CosExtractor<RawQuoteRecord> noOverrideExtractor = new CosExtractor<RawQuoteRecord>() {
             @Override
             public String getCategory() {
                 return "TEST";
@@ -206,7 +206,7 @@ public class CosExtractorTest {
     
     @Test
     public void testCreateCosClient_DefaultImplementationThrowsETLException() {
-        CosExtractor noOverrideExtractor = new CosExtractor() {
+        CosExtractor<RawQuoteRecord> noOverrideExtractor = new CosExtractor<RawQuoteRecord>() {
             @Override
             public String getCategory() {
                 return "TEST";

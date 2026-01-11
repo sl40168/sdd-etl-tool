@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
  *   <li>UTF-8 encoding</li>
  * </ul>
  */
-public class XbondQuoteExtractor extends CosExtractor {
+public class XbondQuoteExtractor extends CosExtractor<RawQuoteRecord> {
     
     /** Logger instance */
     private static final Logger LOG = LoggerFactory.getLogger(XbondQuoteExtractor.class);

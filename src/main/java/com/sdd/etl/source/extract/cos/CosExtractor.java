@@ -7,7 +7,6 @@ import com.sdd.etl.model.SourceDataModel;
 import com.sdd.etl.source.extract.Extractor;
 import com.sdd.etl.source.extract.cos.config.CosSourceConfig;
 import com.sdd.etl.source.extract.cos.model.CosFileMetadata;
-import com.sdd.etl.source.extract.cos.model.RawQuoteRecord;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,7 +55,7 @@ import com.sdd.etl.util.DateUtils;
  * {@code {LOCAL_STORAGE}/{businessDate}/{category}/} where {@code LOCAL_STORAGE}
  * is configured in the context and {@code businessDate} is formatted as {@code YYYYMMDD}.</p>
  */
-public abstract class CosExtractor implements Extractor {
+public abstract class CosExtractor<R> implements Extractor {
     
     /** Logger instance */
     private static final Logger logger = LoggerFactory.getLogger(CosExtractor.class);
@@ -231,7 +230,7 @@ public abstract class CosExtractor implements Extractor {
             logStructured("INFO", getCategory(), "files_downloaded", downloadedFiles.size(), null, null);
             
             // Step 3: Parse and convert
-            List<RawQuoteRecord> allRawRecords = parseAllFiles(downloadedFiles);
+            List<R> allRawRecords = parseAllFiles(downloadedFiles);
             List<SourceDataModel> convertedRecords = convertRawRecords(allRawRecords);
             logStructured("INFO", getCategory(), "records_converted", null, convertedRecords.size(), null);
             
@@ -314,7 +313,7 @@ public abstract class CosExtractor implements Extractor {
      * @return list of converted {@link SourceDataModel} records
      * @throws ETLException if conversion fails (data validation errors, etc.)
      */
-    protected abstract List<SourceDataModel> convertRawRecords(List<RawQuoteRecord> rawRecords) 
+    protected abstract List<SourceDataModel> convertRawRecords(List<R> rawRecords) 
             throws ETLException;
     
     /**
@@ -512,11 +511,11 @@ public abstract class CosExtractor implements Extractor {
      * @return combined list of raw records from all files
      * @throws ETLException if any file parsing fails
      */
-    protected List<RawQuoteRecord> parseAllFiles(List<File> files) throws ETLException {
-        List<RawQuoteRecord> allRawRecords = new ArrayList<>();
+    protected List<R> parseAllFiles(List<File> files) throws ETLException {
+        List<R> allRawRecords = new ArrayList<>();
         
         for (File file : files) {
-            List<RawQuoteRecord> fileRecords = parseCsvFile(file);
+            List<R> fileRecords = parseCsvFile(file);
             allRawRecords.addAll(fileRecords);
         }
         
@@ -533,7 +532,7 @@ public abstract class CosExtractor implements Extractor {
      * @return list of raw records from the file
      * @throws ETLException if parsing fails
      */
-    protected List<RawQuoteRecord> parseCsvFile(File csvFile) throws ETLException {
+    protected List<R> parseCsvFile(File csvFile) throws ETLException {
         // Implementation should parse CSV using OpenCSV
         // This is a placeholder for the contract
         throw new ETLException("COS_EXTRACTOR", null,

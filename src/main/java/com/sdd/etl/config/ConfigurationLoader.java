@@ -120,6 +120,10 @@ public class ConfigurationLoader {
                 while (keys.hasNext()) {
                     String fullKey = keys.next();
                     String suffix = fullKey.substring(prefix.length());
+                    // Normalize double dots caused by INI parser
+                    if (suffix.contains("..")) {
+                        suffix = suffix.replace("..", ".");
+                    }
                     if (!standardFields.contains(suffix)) {
                         String value = iniConfig.getString(fullKey);
                         if (value != null) {
@@ -128,6 +132,7 @@ public class ConfigurationLoader {
                     }
                 }
             }
+
 
             if (!source.isValid()) {
                 throw new ConfigurationException(
