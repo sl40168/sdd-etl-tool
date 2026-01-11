@@ -23,21 +23,76 @@ Load transformed data to DolphinDB using its Java API with a daily ETL process. 
 
 ## Design Approach
 
+### Subprocess Responsibility for Temporary Tables
+
+**IMPORTANT**: Temporary table creation and deletion are handled by subprocesses, NOT by the Loader API.
+
+- **LoadSubprocess**: Executes temporary table creation script (`temporary_table_creation.dos`) via DolphinDB Java API BEFORE data loading
+- **CleanSubprocess**: Executes temporary table deletion script (`temporary_table_deletion.dos`) via DolphinDB Java API after data validation
+- Scripts are loaded from resources at runtime (`src/main/resources/scripts/`)
+
 ### Single Concrete Loader Architecture
 The implementation uses **one concrete loader class** (`DolphinDBLoader`) that handles all three data types (Xbond Quote, Xbond Trade, Bond Future Quote). This design choice simplifies maintenance and aligns with the common Loader API pattern.
 
 **Key Design Decisions**:
 1. **Unified Loader**: A single `DolphinDBLoader` class implements the `Loader` interface and processes all `TargetDataModel` subtypes.
 2. **Configuration‑Driven Table Mapping**: Target table names are configured via `LoaderConfiguration.targetTableMappings` (INI key `target.table.mappings`), mapping each data type to its destination table.
-3. **Record Grouping**: The loader groups incoming records by their `dataType` field, using the configured mappings to determine the target table for each group.
-4. **Sequential Loading by Data Type**: Within each group, records are sorted by configured fields (e.g., `receive_time`), then loaded into the corresponding target table via DolphinDB Java API.
-5. **Column‑Based Array Conversion**: For efficient bulk insertion, record‑oriented data is transformed into column‑oriented arrays (one array per field) before being passed to DolphinDB's `tableInsert`.
+3. **Sequential Loading**: Records are sorted by configured fields (e.g., `receive_time`), then each record is loaded into the corresponding target table based on its `dataType` via DolphinDB Java API.
+4. **Column‑Based Array Conversion**: For efficient bulk insertion, record‑oriented data is transformed into column‑oriented arrays (one array per field) before being passed to DolphinDB's `tableInsert`.
+
+### Concrete TargetDataModel Classes
+
+Three concrete classes extend the abstract `TargetDataModel` base class, each corresponding to a specific data type and target table.
+
+**Field Order Implementation**: All fields in concrete TargetDataModel classes MUST use the `@ColumnOrder` annotation to define their order in DolphinDB tables. This avoids hardcoding and enables dynamic field extraction in the correct order.
+
+**1. XbondQuoteDataModel**
+- **Data Type**: `"XbondQuote"`
+- **Target Table**: `xbond_quote_stream_temp` (configurable via `target.table.mappings`)
+- **Field Count**: 83 fields
+- **Key Fields**: `business_date` (DATE), `exch_product_id` (SYMBOL), `product_type` (SYMBOL), `exchange` (SYMBOL), `source` (SYMBOL), `settle_speed` (INT), `level` (SYMBOL), `status` (SYMBOL), `pre_close_price` (DOUBLE), `pre_settle_price` (DOUBLE), `pre_interest` (DOUBLE), `open_price` (DOUBLE), `high_price` (DOUBLE), `low_price` (DOUBLE), `close_price` (DOUBLE), `settle_price` (DOUBLE), `upper_limit` (DOUBLE), `lower_limit` (DOUBLE), `total_volume` (DOUBLE), `total_turnover` (DOUBLE), `open_interest` (DOUBLE), plus 60 additional fields for bid/offer levels 0‑5, ending with `event_time` (TIMESTAMP), `receive_time` (TIMESTAMP)
+
+**2. XbondTradeDataModel**
+- **Data Type**: `"XbondTrade"`
+- **Target Table**: `xbond_trade_stream_temp` (configurable via `target.table.mappings`)
+- **Field Count**: 15 fields
+- **Key Fields**: `business_date` (DATE), `exch_product_id` (SYMBOL), `product_type` (SYMBOL), `exchange` (SYMBOL), `source` (SYMBOL), `settle_speed` (INT), `last_trade_price` (DOUBLE), `last_trade_yield` (DOUBLE), `last_trade_yield_type` (SYMBOL), `last_trade_volume` (DOUBLE), `last_trade_turnover` (DOUBLE), `last_trade_interest` (DOUBLE), `last_trade_side` (SYMBOL), `event_time` (TIMESTAMP), `receive_time` (TIMESTAMP)
+
+**3. BondFutureQuoteDataModel**
+- **Data Type**: `"BondFutureQuote"`
+- **Target Table**: `fut_market_price_stream_temp` (configurable via `target.table.mappings`)
+- **Field Count**: 96 fields
+- **Key Fields**: `business_date` (DATE), `exch_product_id` (SYMBOL), `product_type` (SYMBOL), `exchange` (SYMBOL), `source` (SYMBOL), `settle_speed` (INT), plus 90 additional fields for last trade details, level/status, price/yield/volume fields, and six timestamp fields (`event_time_trade`, `receive_time_trade`, `create_time_trade`, `event_time_quote`, `receive_time_quote`, `create_time_quote`, `tick_type`, `receive_time`)
+
+**Field Order Annotation**:
+```java
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.FIELD)
+public @interface ColumnOrder {
+    int value();
+}
+```
+
+Example usage in XbondTradeDataModel:
+```java
+public class XbondTradeDataModel extends TargetDataModel {
+    @ColumnOrder(1)
+    private LocalDate businessDate;
+    
+    @ColumnOrder(2)
+    private String exchProductId;
+    
+    // ... remaining fields with @ColumnOrder annotations
+}
+```
+
+**Field Extraction Utility**: The loader will use reflection to extract fields sorted by `@ColumnOrder` annotation value, ensuring correct column order for DolphinDB `tableInsert` operations.
 
 **How It Works**:
 1. The `LoadSubprocess` instantiates `DolphinDBLoader` and calls `init()` with configuration.
 2. `createTemporaryTables()` creates temporary tables for each target table (immutable names).
-3. `sortData()` groups records by data type and sorts each group by configured fields.
-4. `loadData()` converts sorted records to column arrays and inserts them into temporary tables, then appends to target tables.
+3. `sortData()` sorts records by configured fields.
+4. `loadData()` converts sorted records to column arrays and inserts them into temporary tables based on record type, then appends to target tables.
 5. `validateLoad()` compares row counts and ensures data integrity.
 6. `CleanSubprocess` calls `cleanupTemporaryTables()` and `shutdown()`.
 
@@ -106,6 +161,29 @@ src/test/java/com/sdd/etl/
 ```
 
 **Structure Decision**: The project follows the existing single-project Maven structure. New loader components will be added under `com.sdd.etl.loader` package, with API interfaces in `loader/api/`, DolphinDB implementation in `loader/dolphin/`, and configuration in `loader/config/`. Scripts for temporary table operations will be stored in `src/main/resources/scripts/`.
+
+## LoadSubprocess and CleanSubprocess Implementation
+
+### LoadSubprocess Responsibilities
+
+The `LoadSubprocess` is responsible for:
+1. Reading `temporary_table_creation.dos` script from resources at runtime
+2. Establishing DolphinDB connection
+3. Executing the temporary table creation script via DolphinDB Java API
+4. Retrieving transformed data from `ETLContext`
+5. Instantiating and initializing the Loader
+6. Calling `sortData()` on the list of transformed data models
+7. Calling `loadData()` with sorted data
+8. Propagating any exception to break the ETL process
+
+### CleanSubprocess Responsibilities
+
+The `CleanSubprocess` is responsible for:
+1. Reading `temporary_table_deletion.dos` script from resources at runtime
+2. Executing the temporary table deletion script via DolphinDB Java API
+3. Shutting down the loader to release resources
+
+**IMPORTANT**: Both LoadSubprocess and CleanSubprocess must use the SAME DolphinDB connection instance shared via `ETLContext` to ensure proper cleanup of stream tables, engines, and subscriptions created during temporary table creation.
 
 ## Complexity Tracking
 

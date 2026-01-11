@@ -22,44 +22,21 @@ public interface Loader {
     void init(LoaderConfiguration config) throws LoaderConfigurationException;
 
     /**
-     * Create temporary tables for intermediate storage during loading.
-     * Temporary tables are used to hold sorted data before loading into target tables.
-     * @param targetTables List of target tables to create temporary counterparts for
-     * @throws TemporaryTableCreationException if any temporary table cannot be created
-     */
-    void createTemporaryTables(List<TargetTable> targetTables) throws TemporaryTableCreationException;
-
-    /**
-     * Sort the provided TargetDataModel according to the configured sorting fields.
+     * Sort the provided TargetDataModel instances according to the configured sorting fields.
      * Sorting is performed externally (disk-based) if data exceeds memory limits.
-     * @param dataModel The data model containing records to be sorted
-     * @return Sorted TargetDataModel (may be the same instance if already sorted)
+     * @param dataModels List of TargetDataModel instances to be sorted
+     * @return List of sorted TargetDataModel instances (may be same instances if already sorted)
      * @throws SortingException if sorting fails due to IO errors or insufficient resources
      */
-    TargetDataModel sortData(TargetDataModel dataModel) throws SortingException;
+    List<TargetDataModel> sortData(List<TargetDataModel> dataModels) throws SortingException;
 
     /**
-     * Load sorted data into target tables sequentially by data type.
-     * For each target table, data is loaded from its corresponding temporary table.
-     * @param sortedData The sorted TargetDataModel
-     * @param targetTables List of target tables to load into
+     * Load sorted data into target tables based on record type.
+     * Each record is loaded into its corresponding target table based on dataType.
+     * @param sortedData List of sorted TargetDataModel instances
      * @throws LoadingException if any loading operation fails
      */
-    void loadData(TargetDataModel sortedData, List<TargetTable> targetTables) throws LoadingException;
-
-    /**
-     * Validate that data was loaded correctly (e.g., row counts match, no corruption).
-     * @param targetTables List of target tables to validate
-     * @throws ValidationException if validation fails
-     */
-    void validateLoad(List<TargetTable> targetTables) throws ValidationException;
-
-    /**
-     * Clean up temporary tables after successful validation.
-     * @param targetTables List of target tables whose temporary counterparts should be dropped
-     * @throws CleanupException if cleanup fails
-     */
-    void cleanupTemporaryTables(List<TargetTable> targetTables) throws CleanupException;
+    void loadData(List<TargetDataModel> sortedData) throws LoadingException;
 
     /**
      * Shutdown the loader, releasing any resources (e.g., database connections).
@@ -67,6 +44,11 @@ public interface Loader {
     void shutdown();
 }
 ```
+
+**IMPORTANT**: Temporary table creation and deletion are handled by LoadSubprocess and CleanSubprocess respectively, NOT by the Loader interface.
+- LoadSubprocess executes `temporary_table_creation.dos` script via DolphinDB Java API
+- CleanSubprocess executes `temporary_table_deletion.dos` script via DolphinDB Java API
+- Scripts are loaded from resources at runtime
 
 ## Supporting Classes
 
@@ -89,27 +71,42 @@ public class LoaderConfiguration {
 
 ### `com.sdd.etl.loader.api.TargetDataModel`
 
-```java
-public class TargetDataModel {
-    private List<Record> records;
-    private Schema schema;
+Abstract base class for all transformed data ready for loading to DolphinDB.
 
-    // Getters, setters, iterator
+```java
+public abstract class TargetDataModel {
+    protected String dataType;
+    protected Map<String, Integer> fieldOrder;
+    protected List<String> validationErrors;
+
+    // Constructors, getters, setters, validation methods
+    
+    /**
+     * Get the data type identifier for this model.
+     * @return Data type string (e.g., "XbondQuote", "XbondTrade", "BondFutureQuote")
+     */
+    public String getDataType();
+    
+    /**
+     * Validate the data model.
+     * @return true if valid, false otherwise
+     */
+    public abstract boolean validate();
+    
+    /**
+     * Get the field names for this model in the correct order.
+     * @return List of field names ordered by column position
+     */
+    public List<String> getOrderedFieldNames();
 }
 ```
 
-### `com.sdd.etl.loader.api.TargetTable`
+**Concrete implementations:**
+- `XbondQuoteDataModel` - For Xbond quote data
+- `XbondTradeDataModel` - For Xbond trade data  
+- `BondFutureQuoteDataModel` - For bond future quote data
 
-```java
-public class TargetTable {
-    private String name;
-    private String dataType;           // e.g., "quote", "trade"
-    private List<ColumnDefinition> columns;
-    private String temporaryTableName; // Generated by createTemporaryTables
-
-    // Getters, setters
-}
-```
+Each concrete model defines its own field order mapping and validation rules.
 
 ## Exception Hierarchy
 
@@ -136,19 +133,19 @@ Each exception includes:
 ### LoadSubprocess Integration
 
 The `LoadSubprocess` will:
-1. Instantiate the configured `Loader` implementation (e.g., `DolphinDBLoader`).
-2. Call `init()` with configuration from the INI file.
-3. Call `createTemporaryTables()` for all target tables.
-4. Call `sortData()` on the transformed data model.
-5. Call `loadData()` with sorted data and target tables.
-6. Call `validateLoad()` to confirm successful loading.
+1. Execute temporary table creation script (`temporary_table_creation.dos`) via DolphinDB Java API.
+2. Retrieve transformed data from `ETLContext`.
+3. Instantiate the configured `Loader` implementation (e.g., `DolphinDBLoader`).
+4. Call `init()` with configuration from the INI file.
+5. Call `sortData()` on the list of transformed data models (XbondQuoteDataModel, XbondTradeDataModel, BondFutureQuoteDataModel).
+6. Call `loadData()` with sorted data models.
 7. If any step fails, propagate the exception (which will break the ETL process).
 
 ### CleanSubprocess Integration
 
 The `CleanSubprocess` will:
-1. Obtain the same `Loader` instance (shared via context).
-2. Call `cleanupTemporaryTables()` for all target tables.
+1. Execute temporary table deletion script (`temporary_table_deletion.dos`) via DolphinDB Java API.
+2. Obtain the same `Loader` instance (shared via context).
 3. Call `shutdown()` after cleanup.
 
 ## Configuration
@@ -169,12 +166,11 @@ target.table.mappings = XbondQuote:xbond_quote_stream_temp,XbondTrade:xbond_trad
 ## Lifecycle
 
 1. **Initialization**: Loader reads configuration and establishes connection.
-2. **Temporary Table Creation**: Before loading, temporary tables are created with same schema as target tables.
+2. **Temporary Table Creation** (by LoadSubprocess): Before loading, temporary tables are created by executing `temporary_table_creation.dos` via DolphinDB Java API.
 3. **Sorting**: Data is sorted by configured fields (external sort if needed).
-4. **Loading**: Sorted data is inserted into temporary tables, then moved to target tables.
-5. **Validation**: Row counts and integrity checks are performed.
-6. **Cleanup**: Temporary tables are dropped after successful validation.
-7. **Shutdown**: Connection is closed.
+4. **Loading**: Sorted data is inserted directly into target tables via `tableInsert`.
+5. **Cleanup** (by CleanSubprocess): Temporary tables are dropped by executing `temporary_table_deletion.dos` via DolphinDB Java API.
+6. **Shutdown**: Connection is closed.
 
 ## Error Handling
 
@@ -204,7 +200,7 @@ Example future loader types:
 | FR-002 | Use DolphinDB Java API | ✅ Implementation‑specific contract (separate) |
 | FR-003 | Daily ETL process with temporary tables | ✅ createTemporaryTables, cleanupTemporaryTables |
 | FR-004 | Sort TargetDataModel by given fields | ✅ sortData method |
-| FR-005 | Load data sequentially by data type | ✅ loadData with targetTables |
+| FR-005 | Load data sequentially by data type | ✅ loadData with targetTableMappings |
 | FR-006 | Integrate with LoadSubprocess | ✅ Integration points section |
 | FR-007 | Integrate with CleanSubprocess | ✅ Integration points section |
 | FR-008 | Any loading exception breaks ETL process | ✅ Error handling section |
