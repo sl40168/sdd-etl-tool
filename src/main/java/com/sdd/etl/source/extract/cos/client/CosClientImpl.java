@@ -6,15 +6,14 @@ import com.sdd.etl.source.extract.cos.config.CosSourceConfig;
 import com.sdd.etl.source.extract.cos.model.CosFileMetadata;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.ClientConfig;
+import com.qcloud.cos.auth.AnonymousCOSCredentials;
 import com.qcloud.cos.auth.BasicCOSCredentials;
 import com.qcloud.cos.auth.COSCredentials;
+import com.qcloud.cos.endpoint.EndpointBuilder;
 import com.qcloud.cos.exception.CosClientException;
 import com.qcloud.cos.exception.CosServiceException;
-import com.qcloud.cos.model.COSObject;
-import com.qcloud.cos.model.COSObjectSummary;
-import com.qcloud.cos.model.GetObjectRequest;
-import com.qcloud.cos.model.ListObjectsRequest;
-import com.qcloud.cos.model.ObjectListing;
+import com.qcloud.cos.http.HttpProtocol;
+import com.qcloud.cos.model.*;
 import com.qcloud.cos.region.Region;
 
 import java.io.InputStream;
@@ -56,7 +55,7 @@ public class CosClientImpl implements CosClient {
     /**
      * Initializes the COS client with the given configuration.
      * Must be called before any other methods.
-     * 
+     *
      * @param config COS source configuration
      * @throws ETLException if configuration is invalid or client initialization fails
      */
@@ -64,36 +63,94 @@ public class CosClientImpl implements CosClient {
         if (cosClient != null) {
             return; // Already initialized
         }
-        
+
         if (config == null) {
             throw new ETLException("COS_CLIENT", null, "Configuration cannot be null");
         }
-        
+
         if (!config.isValid()) {
-            throw new ETLException("COS_CLIENT", null, 
+            throw new ETLException("COS_CLIENT", null,
                     "Invalid COS configuration: " + config);
         }
-        
+
         try {
-            // Create credentials
-            COSCredentials cred = new BasicCOSCredentials(
-                    config.getSecretId(), 
-                    config.getSecretKey());
-            
+            // Create credentials - use anonymous if secretId/secretKey not provided
+            COSCredentials cred;
+            if (config.isAnonymous()) {
+                cred = new AnonymousCOSCredentials();
+            } else {
+                cred = new BasicCOSCredentials(
+                        config.getSecretId(),
+                        config.getSecretKey());
+            }
+
             // Configure region
-            Region region = new Region(config.getRegion() != null ? 
-                    config.getRegion() : "ap-shanghai");
-            
+            String regionStr = config.getRegion() != null ?
+                    config.getRegion() : "ap-shanghai";
+            Region region = new Region(regionStr);
+
             // Create client configuration
             ClientConfig clientConfig = new ClientConfig(region);
-            // Set additional configuration if needed
-            
+            clientConfig.setHttpProtocol(HttpProtocol.http);
+
+            // Parse custom endpoint from cos.endpoint if using anonymous access or custom domain
+            String endpoint = config.getEndpoint();
+            if (endpoint != null && !endpoint.isEmpty()) {
+                CustomEndpointBuilder builder = new CustomEndpointBuilder(regionStr, endpoint);
+                clientConfig.setEndpointBuilder(builder);
+            }
+
             // Create COS client
             cosClient = new COSClient(cred, clientConfig);
-            
+
         } catch (Exception e) {
             throw new ETLException("COS_CLIENT", null,
                     "Failed to initialize COS client: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Custom endpoint builder for anonymous COS access with custom domains.
+     * Follows the pattern from Sample.md: SelfDefinedEndpointBuilder.
+     */
+    private static class CustomEndpointBuilder implements EndpointBuilder {
+        private String region;
+        private String domain;
+
+        public CustomEndpointBuilder(String region, String endpoint) {
+            this.region = Region.formatRegion(new Region(region));
+            // Extract domain from endpoint URL (e.g., https://chinalionscos.cn -> chinalionscos.cn)
+            this.domain = extractDomain(endpoint);
+        }
+
+        /**
+         * Extracts domain from endpoint URL.
+         * @param endpoint full endpoint URL (e.g., https://chinalionscos.cn or https://cos.ap-beijing.myqcloud.com)
+         * @return domain part (e.g., chinalionscos.cn or myqcloud.com)
+         */
+        private String extractDomain(String endpoint) {
+            if (endpoint == null || endpoint.isEmpty()) {
+                return "myqcloud.com"; // Default COS domain
+            }
+            // Remove protocol prefix
+            String url = endpoint.replaceFirst("^https?://", "");
+            // Extract domain (first part before '/')
+            int slashIndex = url.indexOf('/');
+            if (slashIndex > 0) {
+                url = url.substring(0, slashIndex);
+            }
+            return url;
+        }
+
+        @Override
+        public String buildGeneralApiEndpoint(String bucketName) {
+            String endpoint = String.format("%s.%s", this.region, this.domain);
+            return String.format("%s.%s", bucketName, endpoint);
+        }
+
+        @Override
+        public String buildGetServiceApiEndpoint() {
+            return String.format("%s.%s", this.region, this.domain);
         }
     }
     

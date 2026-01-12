@@ -84,7 +84,6 @@ public class ConfigurationLoader {
         standardFields.add("name");
         standardFields.add("type");
         standardFields.add("connectionString");
-        standardFields.add("primaryKeyField");
         standardFields.add("extractQuery");
         standardFields.add("dateField");
 
@@ -102,7 +101,6 @@ public class ConfigurationLoader {
             source.setName(iniConfig.getString(sectionKey + ".name"));
             source.setType(type);
             source.setConnectionString(iniConfig.getString(sectionKey + ".connectionString"));
-            source.setPrimaryKeyField(iniConfig.getString(sectionKey + ".primaryKeyField"));
             source.setExtractQuery(iniConfig.getString(sectionKey + ".extractQuery"));
             source.setDateField(iniConfig.getString(sectionKey + ".dateField"));
 
@@ -130,7 +128,7 @@ public class ConfigurationLoader {
             if (!source.isValid()) {
                 throw new ConfigurationException(
                         "Invalid source configuration in section [" + sectionKey + "]: "
-                                + "name/type/connectionString/primaryKeyField are required");
+                                + "name/type are required");
             }
 
             config.addSource(source);

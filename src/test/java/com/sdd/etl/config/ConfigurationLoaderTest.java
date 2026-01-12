@@ -55,7 +55,6 @@ public class ConfigurationLoaderTest {
         when(iniConfig.getString("source1.name")).thenReturn("source1");
         when(iniConfig.getString("source1.type")).thenReturn("JDBC");
         when(iniConfig.getString("source1.connectionString")).thenReturn("jdbc:mysql://localhost:3306/db");
-        when(iniConfig.getString("source1.primaryKeyField")).thenReturn("id");
         when(iniConfig.getString("source1.extractQuery")).thenReturn("SELECT * FROM table");
         when(iniConfig.getString("source1.dateField")).thenReturn("date");
 
@@ -74,12 +73,10 @@ public class ConfigurationLoaderTest {
         when(iniConfig.getString("source1.name")).thenReturn("source1");
         when(iniConfig.getString("source1.type")).thenReturn("JDBC");
         when(iniConfig.getString("source1.connectionString")).thenReturn("jdbc:mysql://localhost:3306/db1");
-        when(iniConfig.getString("source1.primaryKeyField")).thenReturn("id");
 
         when(iniConfig.getString("source2.name")).thenReturn("source2");
         when(iniConfig.getString("source2.type")).thenReturn("JDBC");
         when(iniConfig.getString("source2.connectionString")).thenReturn("jdbc:mysql://localhost:3306/db2");
-        when(iniConfig.getString("source2.primaryKeyField")).thenReturn("id");
 
         ETConfiguration config = new ETConfiguration();
         loader.parseSources(iniConfig, config);
@@ -95,7 +92,6 @@ public class ConfigurationLoaderTest {
         when(iniConfig.getInt("targets.count", 0)).thenReturn(1);
         when(iniConfig.getString("target1.name")).thenReturn("target1");
         when(iniConfig.getString("target1.type")).thenReturn("JDBC");
-        when(iniConfig.getString("target1.connectionString")).thenReturn("jdbc:mysql://localhost:3306/db");
         when(iniConfig.getInt("target1.batchSize", 1000)).thenReturn(500);
 
         ETConfiguration config = new ETConfiguration();
@@ -113,12 +109,10 @@ public class ConfigurationLoaderTest {
 
         when(iniConfig.getString("target1.name")).thenReturn("target1");
         when(iniConfig.getString("target1.type")).thenReturn("JDBC");
-        when(iniConfig.getString("target1.connectionString")).thenReturn("jdbc:mysql://localhost:3306/db1");
         when(iniConfig.getInt("target1.batchSize", 1000)).thenReturn(500);
 
         when(iniConfig.getString("target2.name")).thenReturn("target2");
         when(iniConfig.getString("target2.type")).thenReturn("JDBC");
-        when(iniConfig.getString("target2.connectionString")).thenReturn("jdbc:mysql://localhost:3306/db2");
         when(iniConfig.getInt("target2.batchSize", 1000)).thenReturn(1000);
 
         ETConfiguration config = new ETConfiguration();

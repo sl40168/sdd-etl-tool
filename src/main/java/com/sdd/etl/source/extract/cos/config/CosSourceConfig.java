@@ -219,12 +219,30 @@ public class CosSourceConfig extends ETConfiguration.SourceConfig {
     }
 
     /**
+     * Checks if anonymous credentials are being used.
+     * Anonymous mode is enabled when secretId and secretKey are both not provided.
+     *
+     * @return true if using anonymous credentials (no secretId/secretKey)
+     */
+    public boolean isAnonymous() {
+        String secretId = getSecretId();
+        String secretKey = getSecretKey();
+        boolean secretIdProvided = (secretId != null && !secretId.trim().isEmpty());
+        boolean secretKeyProvided = (secretKey != null && !secretKey.trim().isEmpty());
+        return !secretIdProvided && !secretKeyProvided;
+    }
+
+    /**
      * Validates COS-specific configuration.
-     * Required fields: endpoint, bucket, secretId, secretKey.
+     * Required fields: endpoint, bucket.
      * Optional fields: region, prefix.
+     * Credentials (secretId and secretKey) can be either:
+     * - Both provided (authenticated access) - validated for placeholders
+     * - Both omitted (anonymous access)
+     * - Partially provided (invalid - must use either all or none)
      * Endpoint must be a valid URL format.
      * Bucket name must follow COS naming conventions (lowercase letters, numbers, hyphens).
-     * 
+     *
      * @return true if configuration is valid
      */
     @Override
@@ -241,11 +259,23 @@ public class CosSourceConfig extends ETConfiguration.SourceConfig {
         if (getBucket() == null || getBucket().trim().isEmpty()) {
             return false;
         }
-        if (getSecretId() == null || getSecretId().trim().isEmpty()) {
+
+        // Validate credentials: must be either both provided (authenticated) or both omitted (anonymous)
+        String secretId = getSecretId();
+        String secretKey = getSecretKey();
+        boolean secretIdProvided = (secretId != null && !secretId.trim().isEmpty());
+        boolean secretKeyProvided = (secretKey != null && !secretKey.trim().isEmpty());
+
+        // Partial credentials are invalid
+        if (secretIdProvided != secretKeyProvided) {
             return false;
         }
-        if (getSecretKey() == null || getSecretKey().trim().isEmpty()) {
-            return false;
+
+        // If both provided, validate they are not placeholders
+        if (secretIdProvided && secretKeyProvided) {
+            if (isPlaceholderCredential(secretId) || isPlaceholderCredential(secretKey)) {
+                return false;
+            }
         }
 
         // Validate endpoint URL format
@@ -264,11 +294,6 @@ public class CosSourceConfig extends ETConfiguration.SourceConfig {
         // Validate maxFileSize if configured: must be positive
         Long maxFileSize = getMaxFileSize();
         if (maxFileSize != null && maxFileSize <= 0) {
-            return false;
-        }
-
-        // Security validation: check for placeholder credentials
-        if (isPlaceholderCredential(getSecretId()) || isPlaceholderCredential(getSecretKey())) {
             return false;
         }
 

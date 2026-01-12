@@ -12,6 +12,8 @@ import com.sdd.etl.subprocess.SubprocessInterface;
 import com.sdd.etl.subprocess.ExtractSubprocess.MultiSourceExtractSubprocess;
 import com.sdd.etl.subprocess.LoadSubprocess;
 import com.sdd.etl.subprocess.CleanSubprocess;
+import com.sdd.etl.subprocess.TransformSubprocess;
+import com.sdd.etl.subprocess.ValidateSubprocess;
 import com.sdd.etl.util.DateUtils;
 
 import java.util.ArrayList;
@@ -159,18 +161,22 @@ public class DailyETLWorkflow {
      */
     protected List<SubprocessInterface> createSubprocesses() {
         List<SubprocessInterface> subprocesses = new ArrayList<>();
-        
-        // Extract subprocess with support for multiple extractors
+
+        // Step 1: Extract - Extract data from source systems
         subprocesses.add(new MultiSourceExtractSubprocess());
-        
-        // Load and Clean subprocesses for DolphinDB loader (005-dolphindb-loader)
+
+        // Step 2: Transform - Transform source data to target format (006-data-transform)
+        subprocesses.add(new TransformSubprocess());
+
+        // Step 3: Load - Load transformed data to DolphinDB (005-dolphindb-loader)
         subprocesses.add(new LoadSubprocess());
+
+        // Step 4: Validate - Validate loaded data (abstract - needs concrete implementation)
+        // subprocesses.add(new ValidateSubprocess()); // TODO: Add concrete validation implementation
+
+        // Step 5: Clean - Clean up temporary resources (005-dolphindb-loader)
         subprocesses.add(new CleanSubprocess());
-        
-        // TODO: Add concrete implementations for Validate and Transform subprocesses
-        // subprocesses.add(new ValidateSubprocess()); // Abstract - needs concrete impl
-        // subprocesses.add(new TransformSubprocess()); // Abstract - needs concrete impl  
-        
+
         return subprocesses;
     }
 }

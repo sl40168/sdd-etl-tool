@@ -8,6 +8,7 @@ import com.sdd.etl.model.TargetDataModel;
 import com.sdd.etl.loader.dolphin.sort.ExternalSorter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.xxdb.DBConnection;
 
 import java.util.*;
 
@@ -138,7 +139,7 @@ public class DolphinDBLoader implements Loader {
         }
 
         try {
-            Object conn = connection.getConnection();
+            DBConnection conn = connection.getConnection();
 
             // Convert to column-based format
             Map<String, Object> columns = DataConverter.convertSingleRecordToColumns(record);
@@ -154,14 +155,13 @@ public class DolphinDBLoader implements Loader {
                 args.add(entry.getValue());
             }
 
-            // Execute insert using reflection to avoid compile error with DBConnection
+            // Execute insert
             if (!args.isEmpty()) {
                 String argStr = args.toString();
                 insertSql.append(", ").append(argStr.substring(1, argStr.length() - 1));
                 insertSql.append(")");
 
-                java.lang.reflect.Method method = conn.getClass().getMethod("run", String.class);
-                method.invoke(conn, insertSql.toString());
+                conn.run(insertSql.toString());
                 logger.debug("Inserted 1 record to table {}", tableName);
             }
         } catch (Exception e) {

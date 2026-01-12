@@ -373,7 +373,6 @@ public class ExtractSubprocessIntegrationTest {
         source.setType(type);
         source.setProperty("category", category);
         source.setConnectionString("mock://localhost/" + name);
-        source.setPrimaryKeyField("id");
         return source;
     }
     

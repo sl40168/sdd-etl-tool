@@ -3,6 +3,7 @@ package com.sdd.etl.loader.dolphin;
 import com.sdd.etl.loader.api.exceptions.ScriptExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.xxdb.DBConnection;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -64,11 +65,9 @@ public class DolphinDBScriptExecutor {
         }
 
         try {
-            Object conn = connection.getConnection();
+            DBConnection conn = connection.getConnection();
             logger.debug("Executing DolphinDB script: {}", script.substring(0, Math.min(100, script.length())));
-            // Use reflection to call run() method on DBConnection
-            java.lang.reflect.Method method = conn.getClass().getMethod("run", String.class);
-            method.invoke(conn, script);
+            conn.run(script);
         } catch (Exception e) {
             throw new ScriptExecutionException("Failed to execute DolphinDB script: " + e.getMessage(), e);
         }

@@ -213,7 +213,6 @@ public class ETConfiguration {
         private String name;
         private String type;
         private String connectionString;
-        private String primaryKeyField;
         private String extractQuery;
         private String dateField;
         private Map<String, String> properties;
@@ -273,24 +272,6 @@ public class ETConfiguration {
         }
 
         /**
-         * Gets the primary key field name.
-         *
-         * @return primary key field name
-         */
-        public String getPrimaryKeyField() {
-            return primaryKeyField;
-        }
-
-        /**
-         * Sets the primary key field name.
-         *
-         * @param primaryKeyField primary key field name
-         */
-        public void setPrimaryKeyField(String primaryKeyField) {
-            this.primaryKeyField = primaryKeyField;
-        }
-
-        /**
          * Gets the optional extract query template.
          *
          * @return extract query (may be null)
@@ -335,15 +316,14 @@ public class ETConfiguration {
 
         /**
          * Validates that required fields are present.
-         * Required: name, type, connectionString, primaryKeyField.
+         * Required: name, type.
+         * Optional: connectionString, primaryKeyField (for informational purposes only).
          *
          * @return true if required fields are non-empty
          */
         public boolean isValid() {
             return ETConfiguration.isNonEmpty(name)
-                    && ETConfiguration.isNonEmpty(type)
-                    && ETConfiguration.isNonEmpty(connectionString)
-                    && ETConfiguration.isNonEmpty(primaryKeyField);
+                    && ETConfiguration.isNonEmpty(type);
         }
 
         /**
@@ -478,14 +458,14 @@ public class ETConfiguration {
 
         /**
          * Validates that required fields are present.
-         * Required: name, type, connectionString, batchSize (> 0).
+         * Required: name, type, batchSize (> 0).
+         * Optional: connectionString (for informational purposes only).
          *
          * @return true if required fields are valid
          */
         public boolean isValid() {
             return ETConfiguration.isNonEmpty(name)
                     && ETConfiguration.isNonEmpty(type)
-                    && ETConfiguration.isNonEmpty(connectionString)
                     && batchSize > 0;
         }
     }

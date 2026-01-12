@@ -1,12 +1,16 @@
 package com.sdd.etl.subprocess;
 
+import com.sdd.etl.ETLException;
 import com.sdd.etl.context.ETLContext;
+import com.sdd.etl.context.SubprocessType;
 import com.sdd.etl.loader.transformer.Transformer;
 import com.sdd.etl.loader.transformer.TransformerFactory;
 import com.sdd.etl.loader.transformer.exceptions.TransformationException;
 import com.sdd.etl.model.SourceDataModel;
 import com.sdd.etl.model.TargetDataModel;
+import com.sdd.etl.util.DateUtils;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,18 +39,14 @@ import java.util.concurrent.Future;
  *
  * @since 1.0.0
  */
-public class TransformSubprocess {
+public class TransformSubprocess implements SubprocessInterface {
 
-    private final ETLContext context;
-    private final Map<String, Class<?>> dataTypeClassMap;
+    private Map<String, Class<?>> dataTypeClassMap;
 
     /**
      * Constructs a new TransformSubprocess.
-     *
-     * @param context ETLContext containing extracted data
      */
-    public TransformSubprocess(ETLContext context) {
-        this.context = context;
+    public TransformSubprocess() {
         this.dataTypeClassMap = new HashMap<>();
         initializeDataTypeMap();
     }
@@ -61,10 +61,39 @@ public class TransformSubprocess {
     }
 
     /**
+     * Validates context state before transformation.
+     *
+     * @param context ETL context to validate
+     * @throws ETLException if context is invalid
+     */
+    @Override
+    public void validateContext(ETLContext context) throws ETLException {
+        if (context == null) {
+            throw new ETLException("TRANSFORM", "N/A", "Context cannot be null");
+        }
+        if (context.getExtractedData() == null) {
+            LocalDate date = context.getCurrentDate();
+            throw new ETLException("TRANSFORM", DateUtils.formatDate(date),
+                "No extracted data found in context");
+        }
+    }
+
+    /**
+     * Gets the type of this subprocess.
+     *
+     * @return TRANSFORM
+     */
+    @Override
+    public SubprocessType getType() {
+        return SubprocessType.TRANSFORM;
+    }
+
+    /**
      * Executes transform subprocess.
      *
      * <p>This method:
      * <ol>
+     *   <li>Validates context state</li>
      *   <li>Retrieves extracted data from context</li>
      *   <li>Creates thread pool for concurrent transformation</li>
      *   <li>Submits transformation tasks for each data type</li>
@@ -73,9 +102,12 @@ public class TransformSubprocess {
      * </ol>
      * </p>
      *
-     * @throws TransformationException if any transformation fails
+     * @param context ETL context containing execution state
+     * @return number of records transformed
+     * @throws ETLException if transformation fails
      */
-    public void execute() throws TransformationException {
+    @Override
+    public int execute(ETLContext context) throws ETLException {
         // Get extracted data from context
         Object extractedData = context.getExtractedData();
         if (extractedData == null) {
@@ -159,6 +191,8 @@ public class TransformSubprocess {
             // Store results in context
             context.setTransformedData(allTransformedData);
             context.setTransformedDataCount(totalTransformed);
+
+            return totalTransformed;
 
         } finally {
             executor.shutdown();

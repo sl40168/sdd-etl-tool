@@ -99,7 +99,7 @@ public class ExtractorFactory {
                         "', but extractor returns '" + extractor.getCategory() + "'");
             }
             return extractor;
-        } else if ("TradeData".equalsIgnoreCase(category)) {
+        } else if ("XbondCfetsDeal".equalsIgnoreCase(category)) {
             LOG.debug("Creating XbondTradeExtractor for category: {}", category);
             XbondTradeExtractor extractor = new XbondTradeExtractor();
             // Verify extractor's category matches configuration category
