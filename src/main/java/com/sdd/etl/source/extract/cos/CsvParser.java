@@ -37,17 +37,21 @@ public class CsvParser {
     private static final DateTimeFormatter TIME_FORMATTER = 
             DateTimeFormatter.ofPattern("yyyyMMdd-HH:mm:ss.SSS");
     
-    /** CSV header field names */
+    /** CSV header field names (16 columns from Plan.md) */
     private static final String FIELD_ID = "id";
+    private static final String FIELD_UNDERLYING_SYMBOL = "underlying_symbol";
     private static final String FIELD_UNDERLYING_SECURITY_ID = "underlying_security_id";
     private static final String FIELD_UNDERLYING_SETTLEMENT_TYPE = "underlying_settlement_type";
     private static final String FIELD_UNDERLYING_MD_ENTRY_TYPE = "underlying_md_entry_type";
+    private static final String FIELD_UNDERLYING_TRADE_VOLUME = "underlying_trade_volume";
     private static final String FIELD_UNDERLYING_MD_ENTRY_PX = "underlying_md_entry_px";
     private static final String FIELD_UNDERLYING_MD_PRICE_LEVEL = "underlying_md_price_level";
     private static final String FIELD_UNDERLYING_MD_ENTRY_SIZE = "underlying_md_entry_size";
+    private static final String FIELD_UNDERLYING_UN_MATCH_QTY = "underlying_un_match_qty";
     private static final String FIELD_UNDERLYING_YIELD_TYPE = "underlying_yield_type";
     private static final String FIELD_UNDERLYING_YIELD = "underlying_yield";
     private static final String FIELD_TRANSACT_TIME = "transact_time";
+    private static final String FIELD_MQ_PARTITION = "mq_partition";
     private static final String FIELD_MQ_OFFSET = "mq_offset";
     private static final String FIELD_RECV_TIME = "recv_time";
     
@@ -103,11 +107,29 @@ public class CsvParser {
     
     /**
      * Creates a RawQuoteRecord from a CSV row array.
-     * 
+     *
      * <p>Maps CSV field values to record properties based on field names.
      * Handles type conversion (String to Long, String to Integer, String to Double, etc.).
      * Uses safe conversion methods to handle null/empty values.</p>
-     * 
+     *
+     * <p>Expected CSV column order (16 columns from Plan.md):
+     * 1. id
+     * 2. underlying_symbol (ignored, always "-")
+     * 3. underlying_security_id
+     * 4. underlying_settlement_type
+     * 5. underlying_md_entry_type
+     * 6. underlying_trade_volume (ignored, always empty)
+     * 7. underlying_md_entry_px
+     * 8. underlying_md_price_level
+     * 9. underlying_md_entry_size
+     * 10. underlying_un_match_qty (ignored, always empty)
+     * 11. underlying_yield_type
+     * 12. underlying_yield
+     * 13. transact_time
+     * 14. mq_partition (ignored, always 0)
+     * 15. mq_offset
+     * 16. recv_time
+     *
      * @param row CSV row as string array
      * @return RawQuoteRecord object, or null if row is invalid
      */
@@ -115,80 +137,95 @@ public class CsvParser {
         if (row == null || row.length == 0) {
             return null;
         }
-        
+
         try {
             RawQuoteRecord record = new RawQuoteRecord();
-            
-            // Map fields by index (assuming fixed column order)
-            // Order: id, underlying_security_id, underlying_settlement_type, 
-            //        underlying_md_entry_type, underlying_md_entry_px, underlying_md_price_level,
-            //        underlying_md_entry_size, underlying_yield_type, underlying_yield,
-            //        transact_time, mq_offset, recv_time
-            
+
+            // Map fields by index (fixed column order from Plan.md)
             int index = 0;
-            
-            // id
+
+            // 1. id
             if (index < row.length) {
                 record.setId(parseLong(row[index++]));
             }
-            
-            // underlying_security_id
+
+            // 2. underlying_symbol (ignored, always "-")
+            if (index < row.length) {
+                index++;
+            }
+
+            // 3. underlying_security_id
             if (index < row.length) {
                 record.setUnderlyingSecurityId(parseString(row[index++]));
             }
-            
-            // underlying_settlement_type
+
+            // 4. underlying_settlement_type
             if (index < row.length) {
                 record.setUnderlyingSettlementType(parseInt(row[index++]));
             }
-            
-            // underlying_md_entry_type
+
+            // 5. underlying_md_entry_type
             if (index < row.length) {
                 record.setUnderlyingMdEntryType(parseInt(row[index++]));
             }
-            
-            // underlying_md_entry_px
+
+            // 6. underlying_trade_volume (ignored, always empty)
+            if (index < row.length) {
+                index++;
+            }
+
+            // 7. underlying_md_entry_px
             if (index < row.length) {
                 record.setUnderlyingMdEntryPx(parseDouble(row[index++]));
             }
-            
-            // underlying_md_price_level
+
+            // 8. underlying_md_price_level
             if (index < row.length) {
                 record.setUnderlyingMdPriceLevel(parseInt(row[index++]));
             }
-            
-            // underlying_md_entry_size
+
+            // 9. underlying_md_entry_size
             if (index < row.length) {
                 record.setUnderlyingMdEntrySize(parseLong(row[index++]));
             }
-            
-            // underlying_yield_type
+
+            // 10. underlying_un_match_qty (ignored, always empty)
+            if (index < row.length) {
+                index++;
+            }
+
+            // 11. underlying_yield_type
             if (index < row.length) {
                 record.setUnderlyingYieldType(parseString(row[index++]));
             }
-            
-            // underlying_yield
+
+            // 12. underlying_yield
             if (index < row.length) {
                 record.setUnderlyingYield(parseDouble(row[index++]));
             }
-            
-            // transact_time
+
+            // 13. transact_time
             if (index < row.length) {
                 record.setTransactTime(parseDateTime(row[index++]));
             }
-            
-            // mq_offset
+
+            // 14. mq_partition (ignored, always 0)
+            if (index < row.length) {
+                index++;
+            }
+
+            // 15. mq_offset
             if (index < row.length) {
                 record.setMqOffset(parseLong(row[index++]));
             }
-            
-            // recv_time
+
+            // 16. recv_time
             if (index < row.length) {
                 record.setRecvTime(parseDateTime(row[index++]));
             }
-            
+
             return record;
-            
+
         } catch (Exception e) {
             throw new RuntimeException("Failed to create record from CSV row", e);
         }

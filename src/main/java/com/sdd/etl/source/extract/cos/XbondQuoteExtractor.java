@@ -203,13 +203,15 @@ public class XbondQuoteExtractor extends CosExtractor<RawQuoteRecord> {
         }
         model.setExchProductId(securityId);
         
-        // Map settlement type to settleSpeed (0=T+0, 1=T+1)
+        // Map settlement type to settleSpeed (1=T+0, 2=T+1) -> (0, 1)
+        // According to Plan.md: 1->0, 2->1
         Integer settlementType = record.getUnderlyingSettlementType();
         if (settlementType != null) {
-            model.setSettleSpeed(settlementType);
+            // Map 1->0, 2->1, 3->2, etc. (subtract 1)
+            model.setSettleSpeed(settlementType - 1);
         }
         
-        // Get price level (0-5)
+        // Get price level (1-6 from source, needs to map to 0-5 in output)
         Integer priceLevel = record.getUnderlyingMdPriceLevel();
         if (priceLevel == null) {
             return;
@@ -221,11 +223,20 @@ public class XbondQuoteExtractor extends CosExtractor<RawQuoteRecord> {
             return;
         }
         
-        // Map based on entry type and price level
+        // Convert source price level (1-6) to output level (0-5)
+        // source_level 1 -> output_level 0
+        // source_level 2 -> output_level 1
+        // source_level 3 -> output_level 2
+        // source_level 4 -> output_level 3
+        // source_level 5 -> output_level 4
+        // source_level 6 -> output_level 5
+        int outputLevel = priceLevel - 1;
+        
+        // Map based on entry type and output level
         if (entryType == 0) { // bid
-            mapBidFields(record, model, priceLevel);
+            mapBidFields(record, model, outputLevel);
         } else if (entryType == 1) { // offer
-            mapOfferFields(record, model, priceLevel);
+            mapOfferFields(record, model, outputLevel);
         }
     }
     

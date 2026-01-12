@@ -45,27 +45,32 @@ public class CsvParserTest {
     }
     
     /**
-     * Creates a standard header row.
+     * Creates a standard header row (16 columns as per Plan.md).
      */
     private String createHeader() {
-        return "id,underlying_security_id,underlying_settlement_type,underlying_md_entry_type," +
-               "underlying_md_entry_px,underlying_md_price_level,underlying_md_entry_size," +
-               "underlying_yield_type,underlying_yield,transact_time,mq_offset,recv_time";
+        return "id,underlying_symbol,underlying_security_id,underlying_settlement_type," +
+               "underlying_md_entry_type,underlying_trade_volume,underlying_md_entry_px," +
+               "underlying_md_price_level,underlying_md_entry_size,underlying_un_match_qty," +
+               "underlying_yield_type,underlying_yield,transact_time,mq_partition," +
+               "mq_offset,recv_time";
     }
-    
+
     /**
-     * Creates a valid CSV row.
+     * Creates a valid CSV row (16 columns).
      */
     private String createValidRow(long id) {
-        return String.format("%d,BOND%03d,1,0,101.5,2,1000,YTM,3.5,20250101-09:30:00.000,5000,20250101-09:30:01.000",
+        // Format: id, symbol, security_id, settlement_type, entry_type, trade_volume,
+        //         entry_px, price_level, entry_size, un_match_qty,
+        //         yield_type, yield, transact_time, mq_partition, mq_offset, recv_time
+        return String.format("%d,-,BOND%03d,1,0,,101.5,2,1000,,YTM,3.5,20250101-09:30:00.000,0,5000,20250101-09:30:01.000",
                 id, id);
     }
-    
+
     /**
      * Creates a row with missing required fields (invalid).
      */
     private String createInvalidRow() {
-        return ",,1,0,101.5,2,1000,YTM,3.5,20250101-09:30:00.000,5000,20250101-09:30:01.000";
+        return ",-,,1,0,,101.5,2,1000,,YTM,3.5,20250101-09:30:00.000,0,5000,20250101-09:30:01.000";
     }
     
     @Test
@@ -171,18 +176,16 @@ public class CsvParserTest {
     
     @Test
     public void testParse_MissingColumns_IgnoresExtraColumns() throws IOException, ETLException {
-        // Given: CSV with fewer columns than expected (missing last two optional columns)
-        // Standard header still has 12 columns, but data row has only 10
+        // Given: CSV with fewer columns than expected (missing last optional columns)
+        // Standard header has 16 columns, but data row has only 14
         String header = createHeader();
-        // Row with required fields: id, underlyingSecurityId, underlyingSettlementType, underlyingMdEntryType,
-        // underlyingMdEntryPx, underlyingMdPriceLevel, underlyingMdEntrySize, underlyingYieldType, underlyingYield, transactTime
-        // Missing: mq_offset, recv_time (optional)
-        String row = "1,BOND001,1,0,101.5,2,1000,YTM,3.5,20250101-09:30:00.000";
+        // Row with required fields up to mq_offset, missing recv_time
+        String row = "1,-,BOND001,1,0,,101.5,2,1000,,YTM,3.5,20250101-09:30:00.000,0,5000";
         createCsvFile(header + "\n" + row);
-        
+
         // When
         List<RawQuoteRecord> records = csvParser.parse(tempFile);
-        
+
         // Then: Should parse one record, missing optional fields are null
         assertEquals("Should parse one record", 1, records.size());
         RawQuoteRecord record = records.get(0);
@@ -190,26 +193,29 @@ public class CsvParserTest {
         assertEquals("Underlying security id should match", "BOND001", record.getUnderlyingSecurityId());
         assertEquals("Underlying md price level should match", Integer.valueOf(2), record.getUnderlyingMdPriceLevel());
         assertEquals("Transact time should match", LocalDateTime.parse("2025-01-01T09:30:00"), record.getTransactTime());
-        // Missing optional fields should be null
-        assertNull("mqOffset should be null", record.getMqOffset());
+        assertEquals("Mq offset should match", Long.valueOf(5000), record.getMqOffset());
+        // Missing recv_time should be null
         assertNull("recvTime should be null", record.getRecvTime());
     }
-    
+
     @Test
     public void testParse_ExtraColumns_IgnoresExtraColumns() throws IOException, ETLException {
-        // Given: CSV with extra columns beyond the expected 12
+        // Given: CSV with extra columns beyond the expected 16
         String header = createHeader() + ",extra_field1,extra_field2";
-        String row = "1,BOND001,1,0,101.5,2,1000,YTM,3.5,20250101-09:30:00.000,5000,20250101-09:30:01.000,extra1,extra2";
+        String row = "1,-,BOND001,1,0,,101.5,2,1000,,YTM,3.5,20250101-09:30:00.000,0,5000,20250101-09:30:01.000,extra1,extra2";
         createCsvFile(header + "\n" + row);
-        
+
         // When
         List<RawQuoteRecord> records = csvParser.parse(tempFile);
-        
-        // Then: Should parse first 12 columns correctly
+
+        // Then: Should parse first 16 columns correctly
         assertEquals("Should parse one record", 1, records.size());
         RawQuoteRecord record = records.get(0);
         assertEquals("Record id should match", Long.valueOf(1), record.getId());
         assertEquals("Underlying security id should match", "BOND001", record.getUnderlyingSecurityId());
+        assertEquals("Transact time should match", LocalDateTime.parse("2025-01-01T09:30:00"), record.getTransactTime());
+        assertEquals("Mq offset should match", Long.valueOf(5000), record.getMqOffset());
+        assertEquals("Recv time should match", LocalDateTime.parse("2025-01-01T09:30:01"), record.getRecvTime());
     }
     
     @Test(expected = ETLException.class)
@@ -240,12 +246,12 @@ public class CsvParserTest {
     public void testParse_InvalidTimestampFormat_ParsesNull() throws IOException, ETLException {
         // Given: CSV with invalid timestamp format
         String header = createHeader();
-        String row = "1,BOND001,1,0,101.5,2,1000,YTM,3.5,invalid_format,5000,20250101-09:30:01.000";
+        String row = "1,-,BOND001,1,0,,101.5,2,1000,,YTM,3.5,invalid_format,0,5000,20250101-09:30:01.000";
         createCsvFile(header + "\n" + row);
-        
+
         // When
         List<RawQuoteRecord> records = csvParser.parse(tempFile);
-        
+
         // Then: Invalid timestamp results in null field, record may be invalid
         // The parser's parseDateTime method returns null for invalid formats
         // Since transactTime is required, record.isValid() will return false
@@ -258,12 +264,12 @@ public class CsvParserTest {
         // Given: CSV with invalid numeric format for optional field (underlyingMdEntryPx)
         // All required fields are valid
         String header = createHeader();
-        String row = "1,BOND001,1,0,not_a_number,2,1000,YTM,3.5,20250101-09:30:00.000,5000,20250101-09:30:01.000";
+        String row = "1,-,BOND001,1,0,,not_a_number,2,1000,,YTM,3.5,20250101-09:30:00.000,0,5000,20250101-09:30:01.000";
         createCsvFile(header + "\n" + row);
-        
+
         // When
         List<RawQuoteRecord> records = csvParser.parse(tempFile);
-        
+
         // Then: Should parse one record, invalid numeric field parsed as null
         assertEquals("Should parse one record", 1, records.size());
         RawQuoteRecord record = records.get(0);
@@ -279,45 +285,45 @@ public class CsvParserTest {
     public void testParse_EmptyFields_ParsesNull() throws IOException, ETLException {
         // Given: CSV with empty fields
         String header = createHeader();
-        String row = ",,1,0,,2,,,3.5,20250101-09:30:00.000,,";
+        String row = ",-,,1,0,,2,,,3.5,20250101-09:30:00.000,0,,";
         createCsvFile(header + "\n" + row);
-        
+
         // When
         List<RawQuoteRecord> records = csvParser.parse(tempFile);
-        
+
         // Then: Empty fields should parse as null
         // The record will be invalid because underlyingSecurityId is empty (required)
         // So result list should be empty
         assertTrue("Record with empty required fields should be invalid", records.isEmpty());
     }
-    
+
     @Test
     public void testParse_WhitespaceFields_TrimsWhitespace() throws IOException, ETLException {
         // Given: CSV with whitespace around fields
         String header = createHeader();
-        String row = "  1  ,  BOND001  ,  1  ,  0  ,  101.5  ,  2  ,  1000  ,  YTM  ,  3.5  ,  20250101-09:30:00.000  ,  5000  ,  20250101-09:30:01.000  ";
+        String row = "  1  ,  -  ,  BOND001  ,  1  ,  0  ,  ,  101.5  ,  2  ,  1000  ,  ,  YTM  ,  3.5  ,  20250101-09:30:00.000  ,  0  ,  5000  ,  20250101-09:30:01.000  ";
         createCsvFile(header + "\n" + row);
-        
+
         // When
         List<RawQuoteRecord> records = csvParser.parse(tempFile);
-        
+
         // Then: Whitespace should be trimmed
         assertEquals("Should parse one record", 1, records.size());
         RawQuoteRecord record = records.get(0);
         assertEquals("Record id should be trimmed", Long.valueOf(1), record.getId());
         assertEquals("Underlying security id should be trimmed", "BOND001", record.getUnderlyingSecurityId());
     }
-    
+
     @Test
     public void testParse_QuotedFields_HandlesQuotes() throws IOException, ETLException {
         // Given: CSV with quoted fields
         String header = createHeader();
-        String row = "\"1\",\"BOND001\",\"1\",\"0\",\"101.5\",\"2\",\"1000\",\"YTM\",\"3.5\",\"20250101-09:30:00.000\",\"5000\",\"20250101-09:30:01.000\"";
+        String row = "\"1\",\"-\",\"BOND001\",\"1\",\"0\",\"\",\"101.5\",\"2\",\"1000\",\"\",\"YTM\",\"3.5\",\"20250101-09:30:00.000\",\"0\",\"5000\",\"20250101-09:30:01.000\"";
         createCsvFile(header + "\n" + row);
-        
+
         // When
         List<RawQuoteRecord> records = csvParser.parse(tempFile);
-        
+
         // Then: Quoted fields should parse correctly
         assertEquals("Should parse one record", 1, records.size());
         RawQuoteRecord record = records.get(0);
