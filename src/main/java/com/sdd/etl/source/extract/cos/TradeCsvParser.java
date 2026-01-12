@@ -37,21 +37,29 @@ import java.util.List;
 public class TradeCsvParser {
 
     /** Date format for timestamp fields in CSV */
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HH:mm:ss.SSS");
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
-    /** CSV header field names - trade specific */
+    /** Date format for act_dt field in CSV */
+    private static final DateTimeFormatter ACT_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+    /** CSV header field names - trade specific (from Plan.md I.4 format) */
     private static final String FIELD_ID = "id";
-    private static final String FIELD_UNDERLYING_SECURITY_ID = "underlying_security_id";
-    private static final String FIELD_UNDERLYING_SETTLEMENT_TYPE = "underlying_settlement_type";
-    private static final String FIELD_TRADE_PRICE = "trade_price";
-    private static final String FIELD_TRADE_YIELD = "trade_yield";
-    private static final String FIELD_TRADE_YIELD_TYPE = "trade_yield_type";
-    private static final String FIELD_TRADE_VOLUME = "trade_volume";
-    private static final String FIELD_TRADE_SIDE = "trade_side";
-    private static final String FIELD_TRADE_ID = "trade_id";
-    private static final String FIELD_TRANSACT_TIME = "transact_time";
-    private static final String FIELD_MQ_OFFSET = "mq_offset";
+    private static final String FIELD_BOND_KEY = "bond_key";
+    private static final String FIELD_BOND_CODE = "bond_code";
+    private static final String FIELD_SYMBOL = "symbol";
+    private static final String FIELD_DEAL_TIME = "deal_time";
+    private static final String FIELD_ACT_DT = "act_dt";
+    private static final String FIELD_ACT_TM = "act_tm";
+    private static final String FIELD_PRE_MARKET = "pre_market";
+    private static final String FIELD_TRADE_METHOD = "trade_method";
+    private static final String FIELD_SIDE = "side";
+    private static final String FIELD_NET_PRICE = "net_price";
+    private static final String FIELD_SET_DAYS = "set_days";
+    private static final String FIELD_YIELD = "yield";
+    private static final String FIELD_YIELD_TYPE = "yield_type";
+    private static final String FIELD_DEAL_SIZE = "deal_size";
     private static final String FIELD_RECV_TIME = "recv_time";
+    private static final String FIELD_HLID = "hlid";
 
     /**
      * Parses a CSV file and converts to RawTradeRecord objects.
@@ -107,14 +115,21 @@ public class TradeCsvParser {
 
     /**
      * Creates a RawTradeRecord from a CSV row array.
-     * 
+     *
      * <p>
      * Maps CSV field values to record properties based on field names.
      * Handles type conversion (String to Long, String to Integer, String to Double,
      * etc.).
      * Uses safe conversion methods to handle null/empty values.
      * </p>
-     * 
+     *
+     * <p>
+     * CSV format from Plan.md I.4:
+     * id, bond_key, bond_code, symbol, deal_time, act_dt, act_tm, pre_market,
+     * trade_method, side, net_price, set_days, yield, yield_type, deal_size,
+     * recv_time, hlid
+     * </p>
+     *
      * @param row CSV row as string array
      * @return RawTradeRecord object, or null if row is invalid
      */
@@ -126,11 +141,6 @@ public class TradeCsvParser {
         try {
             RawTradeRecord record = new RawTradeRecord();
 
-            // Map fields by index (assuming fixed column order)
-            // Order: id, underlying_security_id, underlying_settlement_type,
-            // trade_price, trade_yield, trade_yield_type, trade_volume,
-            // trade_side, trade_id, transact_time, mq_offset, recv_time
-
             int index = 0;
 
             // id
@@ -138,59 +148,84 @@ public class TradeCsvParser {
                 record.setId(parseLong(row[index++]));
             }
 
-            // underlying_security_id
+            // bond_key -> underlyingSecurityId
             if (index < row.length) {
                 record.setUnderlyingSecurityId(parseString(row[index++]));
             }
 
-            // underlying_settlement_type
+            // bond_code
             if (index < row.length) {
-                record.setUnderlyingSettlementType(parseInt(row[index++]));
+                record.setBondCode(parseString(row[index++]));
             }
 
-            // trade_price
+            // symbol
             if (index < row.length) {
-                record.setTradePrice(parseDouble(row[index++]));
+                record.setSymbol(parseString(row[index++]));
             }
 
-            // trade_yield
+            // deal_time -> dealTime
             if (index < row.length) {
-                record.setTradeYield(parseDouble(row[index++]));
+                record.setDealTime(parseDateTime(row[index++]));
             }
 
-            // trade_yield_type
+            // act_dt
             if (index < row.length) {
-                record.setTradeYieldType(parseString(row[index++]));
+                record.setActDt(parseString(row[index++]));
             }
 
-            // trade_volume
+            // act_tm
             if (index < row.length) {
-                record.setTradeVolume(parseLong(row[index++]));
+                record.setActTm(parseString(row[index++]));
             }
 
-            // trade_side
+            // pre_market
             if (index < row.length) {
-                record.setTradeSide(parseString(row[index++]));
+                record.setPreMarket(parseInt(row[index++]));
             }
 
-            // trade_id
+            // trade_method
             if (index < row.length) {
-                record.setTradeId(parseString(row[index++]));
+                record.setTradeMethod(parseInt(row[index++]));
             }
 
-            // transact_time
+            // side
             if (index < row.length) {
-                record.setTransactTime(parseDateTime(row[index++]));
+                record.setSide(parseString(row[index++]));
             }
 
-            // mq_offset
+            // net_price
             if (index < row.length) {
-                record.setMqOffset(parseLong(row[index++]));
+                record.setNetPrice(parseDouble(row[index++]));
+            }
+
+            // set_days
+            if (index < row.length) {
+                record.setSetDays(parseString(row[index++]));
+            }
+
+            // yield
+            if (index < row.length) {
+                record.setYield(parseDouble(row[index++]));
+            }
+
+            // yield_type
+            if (index < row.length) {
+                record.setYieldType(parseString(row[index++]));
+            }
+
+            // deal_size
+            if (index < row.length) {
+                record.setDealSize(parseLong(row[index++]));
             }
 
             // recv_time
             if (index < row.length) {
                 record.setRecvTime(parseDateTime(row[index++]));
+            }
+
+            // hlid
+            if (index < row.length) {
+                record.setHlid(parseString(row[index++]));
             }
 
             return record;
@@ -266,11 +301,11 @@ public class TradeCsvParser {
 
     /**
      * Parses a LocalDateTime value from string, handling null/empty values.
-     * 
+     *
      * <p>
-     * Expected format: yyyyMMdd-HH:mm:ss.SSS (e.g., 20250101-10:30:00.000)
+     * Expected format: yyyy-MM-dd HH:mm:ss.SSS (e.g., 2026-01-05 10:07:45.068)
      * </p>
-     * 
+     *
      * @param value string value to parse
      * @return LocalDateTime value, or null if value is null/empty
      */

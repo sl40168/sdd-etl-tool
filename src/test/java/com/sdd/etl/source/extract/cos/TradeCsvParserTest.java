@@ -44,33 +44,33 @@ public class TradeCsvParserTest {
     }
 
     /**
-     * Creates a standard header row for trade CSV.
+     * Creates a standard header row for trade CSV (Plan.md I.4 format).
      */
     private String createHeader() {
-        return "id,underlying_security_id,underlying_settlement_type,trade_price,trade_yield,trade_yield_type,trade_volume,counterparty,trade_id,transact_time,mq_offset,recv_time";
+        return "id,bond_key,bond_code,symbol,deal_time,act_dt,act_tm,pre_market,trade_method,side,net_price,set_days,yield,yield_type,deal_size,recv_time,hlid";
     }
 
     /**
-     * Creates a valid CSV row for trade data.
+     * Creates a valid CSV row for trade data (Plan.md I.4 format).
      */
     private String createValidRow(long id) {
         return String.format(
-                "%d,102100%d,1,100.%d,2.5,YTM,1000,C%03d,T20250101-00%d,20250101-10:30:00.000,%d,20250101-10:30:05.000",
-                id, id, id, id, id, id * 100L);
+                "%d,250210.IB,250210,25国开10,2026-01-05 10:07:45.068,20260105,100745068,0,3,Y,98.4289,T+1,1.9875,1,5000,2026-01-05 10:07:45.102,4455380029616468",
+                id, id, id, id, id);
     }
 
     /**
      * Creates a row with missing required fields (invalid).
      */
     private String createInvalidRow() {
-        return ",,1,,,YTM,,,20250101-10:30:00.000,,";
+        return ",,,,,,,,,,T+1,,,";
     }
 
     @Test
     public void testParse_ValidSingleRecord_ReturnsRecord() throws IOException, ETLException {
-        // Given: CSV with header and one valid row
+        // Given: CSV with header and one valid row (Plan.md I.4 format)
         String header = createHeader();
-        String row = createValidRow(1);
+        String row = "11568725,250210.IB,250210,25国开10,2026-01-05 10:07:45.068,20260105,100745068,0,3,Y,98.4289,T+1,1.9875,1,5000,2026-01-05 10:07:45.102,4455380029616468";
         createCsvFile(header + "\n" + row);
 
         // When
@@ -82,53 +82,43 @@ public class TradeCsvParserTest {
 
         RawTradeRecord record = records.get(0);
         assertNotNull("Parsed record should not be null", record);
-        assertEquals("Record id should match", Long.valueOf(1), record.getId());
-        assertEquals("Underlying security id should match", "1021001", record.getUnderlyingSecurityId());
-        assertEquals("Underlying settlement type should match", Integer.valueOf(1),
-                record.getUnderlyingSettlementType());
-        assertEquals("Trade price should match", Double.valueOf(100.1), record.getTradePrice());
-        assertEquals("Trade yield should match", Double.valueOf(2.5), record.getTradeYield());
-        assertEquals("Trade yield type should match", "YTM", record.getTradeYieldType());
-        assertEquals("Trade volume should match", Long.valueOf(1000), record.getTradeVolume());
-        assertEquals("Trade side should match", "C001", record.getTradeSide());
-        assertEquals("Trade id should match", "T20250101-001", record.getTradeId());
-        assertEquals("Transact time should match",
-                LocalDateTime.parse("2025-01-01T10:30:00"), record.getTransactTime());
-        assertEquals("Mq offset should match", Long.valueOf(100), record.getMqOffset());
+        assertEquals("Record id should match", Long.valueOf(11568725), record.getId());
+        assertEquals("Bond key should match", "250210.IB", record.getUnderlyingSecurityId());
+        assertEquals("Net price should match", Double.valueOf(98.4289), record.getNetPrice());
+        assertEquals("Yield should match", Double.valueOf(1.9875), record.getYield());
+        assertEquals("Yield type should match", "1", record.getYieldType());
+        assertEquals("Deal size should match", Long.valueOf(5000), record.getDealSize());
+        assertEquals("Side should match", "Y", record.getSide());
+        assertEquals("Deal time should match",
+                LocalDateTime.parse("2026-01-05T10:07:45.068"), record.getDealTime());
         assertEquals("Recv time should match",
-                LocalDateTime.parse("2025-01-01T10:30:05"), record.getRecvTime());
+                LocalDateTime.parse("2026-01-05T10:07:45.102"), record.getRecvTime());
     }
 
     @Test
     public void testParse_MultipleValidRecords_ReturnsAll() throws IOException, ETLException {
-        // Given: CSV with header and multiple valid rows
+        // Given: CSV with header and multiple valid rows (Plan.md I.4 format)
         String header = createHeader();
         StringBuilder content = new StringBuilder(header);
-        for (int i = 1; i <= 5; i++) {
-            content.append("\n").append(createValidRow(i));
-        }
+        content.append("\n11568725,250210.IB,250210,25国开10,2026-01-05 10:07:45.068,20260105,100745068,0,3,Y,98.4289,T+1,1.9875,1,5000,2026-01-05 10:07:45.102,4455380029616468");
+        content.append("\n11577382,250210.IB,250210,25国开10,2026-01-05 13:57:55.352,20260105,135755352,0,3,Y,98.4082,T+1,1.99,1,5000,2026-01-05 13:57:55.384,4455380029893492");
+        content.append("\n11590145,250210.IB,250210,25国开10,2026-01-05 15:50:54.350,20260105,155054350,0,3,Y,98.3668,T+1,1.995,1,3000,2026-01-05 15:50:54.385,4455380030301908");
         createCsvFile(content.toString());
 
         // When
         List<RawTradeRecord> records = csvParser.parse(tempFile);
 
         // Then
-        assertEquals("Should parse exactly 5 records", 5, records.size());
-        for (int i = 0; i < 5; i++) {
-            RawTradeRecord record = records.get(i);
-            assertEquals("Record id should match", Long.valueOf(i + 1), record.getId());
-            assertEquals("Underlying security id should match",
-                    String.format("102100%d", i + 1), record.getUnderlyingSecurityId());
-        }
+        assertEquals("Should parse exactly 3 records", 3, records.size());
     }
 
     @Test
     public void testParse_MixedValidAndInvalid_ReturnsOnlyValid() throws IOException, ETLException {
         // Given: CSV with header, valid rows, and invalid rows
         String header = createHeader();
-        String valid1 = createValidRow(1);
-        String invalid = createInvalidRow();
-        String valid2 = createValidRow(2);
+        String valid1 = "11568725,250210.IB,250210,25国开10,2026-01-05 10:07:45.068,20260105,100745068,0,3,Y,98.4289,T+1,1.9875,1,5000,2026-01-05 10:07:45.102,4455380029616468";
+        String invalid = ",,,,,,,,,,T+1,,,";
+        String valid2 = "11577382,250210.IB,250210,25国开10,2026-01-05 13:57:55.352,20260105,135755352,0,3,Y,98.4082,T+1,1.99,1,5000,2026-01-05 13:57:55.384,4455380029893492";
 
         createCsvFile(header + "\n" + valid1 + "\n" + invalid + "\n" + valid2);
 
@@ -137,8 +127,8 @@ public class TradeCsvParserTest {
 
         // Then
         assertEquals("Should parse only 2 valid records", 2, records.size());
-        assertEquals("First record id should be 1", Long.valueOf(1), records.get(0).getId());
-        assertEquals("Second record id should be 2", Long.valueOf(2), records.get(1).getId());
+        assertEquals("First record id should be 11568725", Long.valueOf(11568725), records.get(0).getId());
+        assertEquals("Second record id should be 11577382", Long.valueOf(11577382), records.get(1).getId());
     }
 
     @Test
@@ -166,55 +156,6 @@ public class TradeCsvParserTest {
         // Then
         assertNotNull("Records list should not be null", records);
         assertTrue("Records list should be empty when only header present", records.isEmpty());
-    }
-
-    @Test
-    public void testParse_MissingColumns_IgnoresExtraColumns() throws IOException, ETLException {
-        // Given: CSV with fewer columns than expected (missing last two optional
-        // columns)
-        // Standard header still has 12 columns, but data row has only 10
-        String header = createHeader();
-        // Row with required fields: id, underlyingSecurityId, underlyingSettlementType,
-        // tradePrice,
-        // tradeYield, tradeYieldType, tradeVolume, counterparty, tradeId, transactTime
-        // Missing: mq_offset, recv_time (optional)
-        String row = "1,1021001,1,100.5,2.5,YTM,1000,C001,T20250101-001,20250101-10:30:00.000";
-        createCsvFile(header + "\n" + row);
-
-        // When
-        List<RawTradeRecord> records = csvParser.parse(tempFile);
-
-        // Then: Should parse one record, missing optional fields are null
-        assertEquals("Should parse one record", 1, records.size());
-        RawTradeRecord record = records.get(0);
-        assertEquals("Record id should match", Long.valueOf(1), record.getId());
-        assertEquals("Underlying security id should match", "1021001", record.getUnderlyingSecurityId());
-        assertEquals("Trade price should match", Double.valueOf(100.5), record.getTradePrice());
-        assertEquals("Trade id should match", "T20250101-001", record.getTradeId());
-        assertEquals("Transact time should match", LocalDateTime.parse("2025-01-01T10:30:00"),
-                record.getTransactTime());
-        // Missing optional fields should be null
-        assertNull("mqOffset should be null", record.getMqOffset());
-        assertNull("recvTime should be null", record.getRecvTime());
-    }
-
-    @Test
-    public void testParse_ExtraColumns_IgnoresExtraColumns() throws IOException, ETLException {
-        // Given: CSV with extra columns beyond the expected 12
-        String header = createHeader() + ",extra_field1,extra_field2";
-        String row = "1,1021001,1,100.5,2.5,YTM,1000,C001,T20250101-001,20250101-10:30:00.000,100,20250101-10:30:05.000,extra1,extra2";
-        createCsvFile(header + "\n" + row);
-
-        // When
-        List<RawTradeRecord> records = csvParser.parse(tempFile);
-
-        // Then: Should parse first 12 columns correctly
-        assertEquals("Should parse one record", 1, records.size());
-        RawTradeRecord record = records.get(0);
-        assertEquals("Record id should match", Long.valueOf(1), record.getId());
-        assertEquals("Underlying security id should match", "1021001", record.getUnderlyingSecurityId());
-        assertEquals("Trade price should match", Double.valueOf(100.5), record.getTradePrice());
-        assertEquals("Trade id should match", "T20250101-001", record.getTradeId());
     }
 
     @Test(expected = ETLException.class)
@@ -245,24 +186,24 @@ public class TradeCsvParserTest {
     public void testParse_InvalidTimestampFormat_ParsesNull() throws IOException, ETLException {
         // Given: CSV with invalid timestamp format
         String header = createHeader();
-        String row = "1,1021001,1,100.5,2.5,YTM,1000,C001,T20250101-001,invalid_format,100,20250101-10:30:05.000";
+        String row = "11568725,250210.IB,250210,25国开10,invalid_format,20260105,100745068,0,3,Y,98.4289,T+1,1.9875,1,5000,2026-01-05 10:07:45.102,4455380029616468";
         createCsvFile(header + "\n" + row);
 
         // When
         List<RawTradeRecord> records = csvParser.parse(tempFile);
 
         // Then: Invalid timestamp results in null field, record may be invalid
-        // Since transactTime is required, record.isValid() will return false
+        // Since dealTime is required, record.isValid() will return false
         // and the record will not be added to the result list
         assertTrue("Invalid timestamp should result in empty list", records.isEmpty());
     }
 
     @Test
     public void testParse_NumericFieldsWithInvalidFormat_ReturnsNull() throws IOException, ETLException {
-        // Given: CSV with invalid numeric format for required field (trade_price)
+        // Given: CSV with invalid numeric format for required field (net_price)
         // All required fields are otherwise valid
         String header = createHeader();
-        String row = "1,1021001,1,not_a_number,2.5,YTM,1000,C001,T20250101-001,20250101-10:30:00.000,100,20250101-10:30:05.000";
+        String row = "11568725,250210.IB,250210,25国开10,2026-01-05 10:07:45.068,20260105,100745068,0,3,Y,not_a_number,T+1,1.9875,1,5000,2026-01-05 10:07:45.102,4455380029616468";
         createCsvFile(header + "\n" + row);
 
         // When
@@ -271,20 +212,19 @@ public class TradeCsvParserTest {
         // Then: Should parse one record, invalid numeric field parsed as null
         assertEquals("Should parse one record", 1, records.size());
         RawTradeRecord record = records.get(0);
-        assertEquals("Record id should match", Long.valueOf(1), record.getId());
-        assertEquals("Underlying security id should match", "1021001", record.getUnderlyingSecurityId());
-        assertNull("Invalid numeric trade_price should be null", record.getTradePrice());
+        assertEquals("Record id should match", Long.valueOf(11568725), record.getId());
+        assertEquals("Bond key should match", "250210.IB", record.getUnderlyingSecurityId());
+        assertNull("Invalid numeric net_price should be null", record.getNetPrice());
         // Required fields should be present
-        assertEquals("Trade id should match", "T20250101-001", record.getTradeId());
-        assertEquals("Transact time should match", LocalDateTime.parse("2025-01-01T10:30:00"),
-                record.getTransactTime());
+        assertEquals("Deal time should match", LocalDateTime.parse("2026-01-05T10:07:45.068"),
+                record.getDealTime());
     }
 
     @Test
     public void testParse_EmptyFields_ParsesNull() throws IOException, ETLException {
         // Given: CSV with empty fields
         String header = createHeader();
-        String row = ",,1,,,YTM,,,20250101-10:30:00.000,,";
+        String row = ",,,,,,,,,,T+1,,,";
         createCsvFile(header + "\n" + row);
 
         // When
@@ -300,7 +240,7 @@ public class TradeCsvParserTest {
     public void testParse_WhitespaceFields_TrimsWhitespace() throws IOException, ETLException {
         // Given: CSV with whitespace around fields
         String header = createHeader();
-        String row = "  1  ,  1021001  ,  1  ,  100.5  ,  2.5  ,  YTM  ,  1000  ,  C001  ,  T20250101-001  ,  20250101-10:30:00.000  ,  100  ,  20250101-10:30:05.000  ";
+        String row = "  11568725  ,  250210.IB  ,  250210  ,  25国开10  ,  2026-01-05 10:07:45.068  ,  20260105  ,  100745068  ,  0  ,  3  ,  Y  ,  98.4289  ,  T+1  ,  1.9875  ,  1  ,  5000  ,  2026-01-05 10:07:45.102  ,  4455380029616468  ";
         createCsvFile(header + "\n" + row);
 
         // When
@@ -309,16 +249,16 @@ public class TradeCsvParserTest {
         // Then: Whitespace should be trimmed
         assertEquals("Should parse one record", 1, records.size());
         RawTradeRecord record = records.get(0);
-        assertEquals("Record id should be trimmed", Long.valueOf(1), record.getId());
-        assertEquals("Underlying security id should be trimmed", "1021001", record.getUnderlyingSecurityId());
-        assertEquals("Trade price should be trimmed", Double.valueOf(100.5), record.getTradePrice());
+        assertEquals("Record id should be trimmed", Long.valueOf(11568725), record.getId());
+        assertEquals("Bond key should be trimmed", "250210.IB", record.getUnderlyingSecurityId());
+        assertEquals("Net price should be trimmed", Double.valueOf(98.4289), record.getNetPrice());
     }
 
     @Test
     public void testParse_QuotedFields_HandlesQuotes() throws IOException, ETLException {
         // Given: CSV with quoted fields
         String header = createHeader();
-        String row = "\"1\",\"1021001\",\"1\",\"100.5\",\"2.5\",\"YTM\",\"1000\",\"C001\",\"T20250101-001\",\"20250101-10:30:00.000\",\"100\",\"20250101-10:30:05.000\"";
+        String row = "\"11568725\",\"250210.IB\",\"250210\",\"25国开10\",\"2026-01-05 10:07:45.068\",\"20260105\",\"100745068\",\"0\",\"3\",\"Y\",\"98.4289\",\"T+1\",\"1.9875\",\"1\",\"5000\",\"2026-01-05 10:07:45.102\",\"4455380029616468\"";
         createCsvFile(header + "\n" + row);
 
         // When
@@ -327,64 +267,79 @@ public class TradeCsvParserTest {
         // Then: Quoted fields should parse correctly
         assertEquals("Should parse one record", 1, records.size());
         RawTradeRecord record = records.get(0);
-        assertEquals("Record id should match", Long.valueOf(1), record.getId());
-        assertEquals("Underlying security id should match", "1021001", record.getUnderlyingSecurityId());
-        assertEquals("Trade price should match", Double.valueOf(100.5), record.getTradePrice());
-        assertEquals("Trade id should match", "T20250101-001", record.getTradeId());
+        assertEquals("Record id should match", Long.valueOf(11568725), record.getId());
+        assertEquals("Bond key should match", "250210.IB", record.getUnderlyingSecurityId());
+        assertEquals("Net price should match", Double.valueOf(98.4289), record.getNetPrice());
     }
 
+    /**
+     * Test parsing CSV format from Plan.md I.4 section.
+     * This test uses the actual CSV format defined in Plan.md for Xbond Trade data.
+     * 
+     * CSV format from Plan.md:
+     * id | bond_key | bond_code | symbol | deal_time | act_dt | act_tm | pre_market | 
+     * trade_method | side | net_price | set_days | yield | yield_type | deal_size | recv_time | hlid
+     */
     @Test
-    public void testParse_TradeYieldOnly_NoPrice_Valid() throws IOException, ETLException {
-        // Given: CSV with only trade yield (no price, but volume present)
-        String header = createHeader();
-        String row = "1,1021001,1,,2.5,YTM,1000,C001,T20250101-001,20250101-10:30:00.000,100,20250101-10:30:05.000";
-        createCsvFile(header + "\n" + row);
+    public void testParse_PlanMdFormat_CsvFormat() throws IOException, ETLException {
+        // Given: CSV in format from Plan.md I.4 section
+        String header = "id,bond_key,bond_code,symbol,deal_time,act_dt,act_tm,pre_market,trade_method,side,net_price,set_days,yield,yield_type,deal_size,recv_time,hlid";
+        String row1 = "11568725,250210.IB,250210,25国开10,2026-01-05 10:07:45.068,20260105,100745068,0,3,Y,98.4289,T+1,1.9875,1,5000,2026-01-05 10:07:45.102,4455380029616468";
+        String row2 = "11577382,250210.IB,250210,25国开10,2026-01-05 13:57:55.352,20260105,135755352,0,3,Y,98.4082,T+1,1.99,1,5000,2026-01-05 13:57:55.384,4455380029893492";
+        String row3 = "11590145,250210.IB,250210,25国开10,2026-01-05 15:50:54.350,20260105,155054350,0,3,Y,98.3668,T+1,1.995,1,3000,2026-01-05 15:50:54.385,4455380030301908";
+
+        createCsvFile(header + "\n" + row1 + "\n" + row2 + "\n" + row3);
 
         // When
         List<RawTradeRecord> records = csvParser.parse(tempFile);
 
-        // Then: Should parse one record, tradePrice null (will be NaN), tradeYield set
-        assertEquals("Should parse one record", 1, records.size());
-        RawTradeRecord record = records.get(0);
-        assertEquals("Record id should match", Long.valueOf(1), record.getId());
-        assertNull("Trade price should be null", record.getTradePrice());
-        assertEquals("Trade yield should match", Double.valueOf(2.5), record.getTradeYield());
-        assertEquals("Trade volume should match", Long.valueOf(1000), record.getTradeVolume());
-        // Record should be valid because tradeYield and tradeVolume are populated
-        assertTrue("Record with yield and volume should be valid", record.isValid());
-    }
+        // Then: Should parse all 3 records correctly
+        assertNotNull("Records list should not be null", records);
+        assertEquals("Should parse exactly 3 records", 3, records.size());
 
-    @Test
-    public void testParse_TradeVolumeZero_Invalid() throws IOException, ETLException {
-        // Given: CSV with trade volume = 0 (business validation will reject, but raw
-        // parsing succeeds)
-        String header = createHeader();
-        String row = "1,1021001,1,100.5,2.5,YTM,0,C001,T20250101-001,20250101-10:30:00.000,100,20250101-10:30:05.000";
-        createCsvFile(header + "\n" + row);
+        // Verify first record
+        RawTradeRecord record1 = records.get(0);
+        assertEquals("Record 1 id should match", Long.valueOf(11568725), record1.getId());
+        assertEquals("Record 1 bond_key should match", "250210.IB", record1.getUnderlyingSecurityId());
+        assertEquals("Record 1 net_price should match", Double.valueOf(98.4289), record1.getNetPrice());
+        assertEquals("Record 1 set_days (T+1) should be parsed", "T+1", record1.getSetDays());
+        assertEquals("Record 1 yield should match", Double.valueOf(1.9875), record1.getYield());
+        assertEquals("Record 1 yield_type should match", "1", record1.getYieldType());
+        assertEquals("Record 1 deal_size should match", Long.valueOf(5000), record1.getDealSize());
+        assertEquals("Record 1 side should match", "Y", record1.getSide());
+        assertEquals("Record 1 deal_time should match", 
+                LocalDateTime.parse("2026-01-05T10:07:45.068"), record1.getDealTime());
+        assertEquals("Record 1 recv_time should match", 
+                LocalDateTime.parse("2026-01-05T10:07:45.102"), record1.getRecvTime());
 
-        // When
-        List<RawTradeRecord> records = csvParser.parse(tempFile);
+        // Verify second record
+        RawTradeRecord record2 = records.get(1);
+        assertEquals("Record 2 id should match", Long.valueOf(11577382), record2.getId());
+        assertEquals("Record 2 bond_key should match", "250210.IB", record2.getUnderlyingSecurityId());
+        assertEquals("Record 2 net_price should match", Double.valueOf(98.4082), record2.getNetPrice());
+        assertEquals("Record 2 set_days (T+1) should be parsed", "T+1", record2.getSetDays());
+        assertEquals("Record 2 yield should match", Double.valueOf(1.99), record2.getYield());
+        assertEquals("Record 2 yield_type should match", "1", record2.getYieldType());
+        assertEquals("Record 2 deal_size should match", Long.valueOf(5000), record2.getDealSize());
+        assertEquals("Record 2 side should match", "Y", record2.getSide());
+        assertEquals("Record 2 deal_time should match", 
+                LocalDateTime.parse("2026-01-05T13:57:55.352"), record2.getDealTime());
+        assertEquals("Record 2 recv_time should match", 
+                LocalDateTime.parse("2026-01-05T13:57:55.384"), record2.getRecvTime());
 
-        // Then: Record should be parsed (raw validation passes), but will fail business
-        // validation later
-        assertEquals("Should parse one record (raw validation passes)", 1, records.size());
-        RawTradeRecord record = records.get(0);
-        assertEquals("Trade volume should be 0", Long.valueOf(0), record.getTradeVolume());
-    }
-
-    @Test
-    public void testParse_SettlementTypeZero_Valid() throws IOException, ETLException {
-        // Given: CSV with settlement type 0 (T+0)
-        String header = createHeader();
-        String row = "1,1021001,0,100.5,2.5,YTM,1000,C001,T20250101-001,20250101-10:30:00.000,100,20250101-10:30:05.000";
-        createCsvFile(header + "\n" + row);
-
-        // When
-        List<RawTradeRecord> records = csvParser.parse(tempFile);
-
-        // Then: Should parse one record with settlement type 0
-        assertEquals("Should parse one record", 1, records.size());
-        RawTradeRecord record = records.get(0);
-        assertEquals("Settlement type should be 0", Integer.valueOf(0), record.getUnderlyingSettlementType());
+        // Verify third record
+        RawTradeRecord record3 = records.get(2);
+        assertEquals("Record 3 id should match", Long.valueOf(11590145), record3.getId());
+        assertEquals("Record 3 bond_key should match", "250210.IB", record3.getUnderlyingSecurityId());
+        assertEquals("Record 3 net_price should match", Double.valueOf(98.3668), record3.getNetPrice());
+        assertEquals("Record 3 set_days (T+1) should be parsed", "T+1", record3.getSetDays());
+        assertEquals("Record 3 yield should match", Double.valueOf(1.995), record3.getYield());
+        assertEquals("Record 3 yield_type should match", "1", record3.getYieldType());
+        assertEquals("Record 3 deal_size should match", Long.valueOf(3000), record3.getDealSize());
+        assertEquals("Record 3 side should match", "Y", record3.getSide());
+        assertEquals("Record 3 deal_time should match", 
+                LocalDateTime.parse("2026-01-05T15:50:54.350"), record3.getDealTime());
+        assertEquals("Record 3 recv_time should match", 
+                LocalDateTime.parse("2026-01-05T15:50:54.385"), record3.getRecvTime());
     }
 }

@@ -160,20 +160,17 @@ public class XbondTradeExtractorTest {
     public void testConvertRawRecords_SingleValidRecord_CreatesModel() throws ETLException {
         // Setup
         List<RawTradeRecord> rawRecords = new ArrayList<>();
-        RawTradeRecord record = new RawTradeRecord(
-                12345L, // id
-                "1021001", // underlyingSecurityId
-                1, // underlyingSettlementType (T+1)
-                100.5, // tradePrice
-                2.5, // tradeYield
-                "YTM", // tradeYieldType
-                1000L, // tradeVolume
-                "C001", // counterparty
-                "T20250101-001", // tradeId
-                LocalDateTime.of(2025, 1, 1, 10, 30, 0), // transactTime
-                500L, // mqOffset
-                LocalDateTime.of(2025, 1, 1, 10, 30, 5) // recvTime
-        );
+        RawTradeRecord record = new RawTradeRecord();
+        record.setId(12345L);
+        record.setUnderlyingSecurityId("1021001");
+        record.setSetDays("T+1");
+        record.setNetPrice(100.5);
+        record.setYield(2.5);
+        record.setYieldType("YTM");
+        record.setDealSize(1000L);
+        record.setSide("C001");
+        record.setDealTime(LocalDateTime.of(2025, 1, 1, 10, 30, 0));
+        record.setRecvTime(LocalDateTime.of(2025, 1, 1, 10, 30, 5));
         rawRecords.add(record);
 
         // Set current business date via reflection (normally set by extract method)
@@ -194,8 +191,8 @@ public class XbondTradeExtractorTest {
         assertEquals("tradeYieldType should match", "YTM", model.getTradeYieldType());
         assertEquals("tradeVolume should match", Long.valueOf(1000), model.getTradeVolume());
         assertEquals("trade side should match", "C001", model.getTradeSide());
-        assertEquals("tradeId should match", "T20250101-001", model.getTradeId());
-        assertEquals("eventTime should match transactTime", LocalDateTime.of(2025, 1, 1, 10, 30, 0),
+        assertEquals("tradeId should match", "12345", model.getTradeId());
+        assertEquals("eventTime should match dealTime", LocalDateTime.of(2025, 1, 1, 10, 30, 0),
                 model.getEventTime());
         assertEquals("receiveTime should match recvTime", LocalDateTime.of(2025, 1, 1, 10, 30, 5),
                 model.getReceiveTime());
@@ -210,15 +207,29 @@ public class XbondTradeExtractorTest {
         // Setup: two records (one-to-one mapping, no grouping)
         List<RawTradeRecord> rawRecords = new ArrayList<>();
 
-        RawTradeRecord record1 = new RawTradeRecord(
-                1L, "1021001", 1, 100.5, 2.5, "YTM", 1000L, "X", "T001",
-                LocalDateTime.of(2025, 1, 1, 10, 30, 0), 500L,
-                LocalDateTime.of(2025, 1, 1, 10, 30, 5));
+        RawTradeRecord record1 = new RawTradeRecord();
+        record1.setId(1L);
+        record1.setUnderlyingSecurityId("1021001");
+        record1.setSetDays("T+1");
+        record1.setNetPrice(100.5);
+        record1.setYield(2.5);
+        record1.setYieldType("YTM");
+        record1.setDealSize(1000L);
+        record1.setSide("X");
+        record1.setDealTime(LocalDateTime.of(2025, 1, 1, 10, 30, 0));
+        record1.setRecvTime(LocalDateTime.of(2025, 1, 1, 10, 30, 5));
 
-        RawTradeRecord record2 = new RawTradeRecord(
-                2L, "1021001", 1, 100.6, 2.6, "YTM", 2000L, "Y", "T002",
-                LocalDateTime.of(2025, 1, 1, 10, 31, 0), 500L,
-                LocalDateTime.of(2025, 1, 1, 10, 31, 5));
+        RawTradeRecord record2 = new RawTradeRecord();
+        record2.setId(2L);
+        record2.setUnderlyingSecurityId("1021001");
+        record2.setSetDays("T+1");
+        record2.setNetPrice(100.6);
+        record2.setYield(2.6);
+        record2.setYieldType("YTM");
+        record2.setDealSize(2000L);
+        record2.setSide("Y");
+        record2.setDealTime(LocalDateTime.of(2025, 1, 1, 10, 31, 0));
+        record2.setRecvTime(LocalDateTime.of(2025, 1, 1, 10, 31, 5));
 
         rawRecords.add(record1);
         rawRecords.add(record2);
@@ -236,14 +247,14 @@ public class XbondTradeExtractorTest {
         assertEquals("First model exchProductId", "1021001.IB", model1.getExchProductId());
         assertEquals("First model tradePrice", Double.valueOf(100.5), model1.getTradePrice());
         assertEquals("First model tradeSide should be mapped", "TKN", model1.getTradeSide());
-        assertEquals("First model tradeId", "T001", model1.getTradeId());
+        assertEquals("First model tradeId", "1", model1.getTradeId());
 
         // Second model
         XbondTradeDataModel model2 = (XbondTradeDataModel) result.get(1);
         assertEquals("Second model exchProductId", "1021001.IB", model2.getExchProductId());
         assertEquals("Second model tradePrice", Double.valueOf(100.6), model2.getTradePrice());
         assertEquals("Second model tradeSide should be mapped", "GVN", model2.getTradeSide());
-        assertEquals("Second model tradeId", "T002", model2.getTradeId());
+        assertEquals("Second model tradeId", "2", model2.getTradeId());
 
         assertTrue("First model should be valid", model1.validate());
         assertTrue("Second model should be valid", model2.validate());
@@ -251,18 +262,32 @@ public class XbondTradeExtractorTest {
 
     @Test
     public void testConvertRawRecords_MultipleRecordsDifferentMqOffset_CreatesMultipleModels() throws ETLException {
-        // Setup: two records with different mqOffset values
+        // Setup: two records with different values
         List<RawTradeRecord> rawRecords = new ArrayList<>();
 
-        RawTradeRecord record1 = new RawTradeRecord(
-                1L, "1021001", 1, 100.5, 2.5, "YTM", 1000L, "C001", "T001",
-                LocalDateTime.of(2025, 1, 1, 10, 30, 0), 500L,
-                LocalDateTime.of(2025, 1, 1, 10, 30, 5));
+        RawTradeRecord record1 = new RawTradeRecord();
+        record1.setId(1L);
+        record1.setUnderlyingSecurityId("1021001");
+        record1.setSetDays("T+1");
+        record1.setNetPrice(100.5);
+        record1.setYield(2.5);
+        record1.setYieldType("YTM");
+        record1.setDealSize(1000L);
+        record1.setSide("C001");
+        record1.setDealTime(LocalDateTime.of(2025, 1, 1, 10, 30, 0));
+        record1.setRecvTime(LocalDateTime.of(2025, 1, 1, 10, 30, 5));
 
-        RawTradeRecord record2 = new RawTradeRecord(
-                2L, "1021002", 0, 101.0, 3.0, "YTC", 1500L, "C003", "T003",
-                LocalDateTime.of(2025, 1, 1, 10, 35, 0), 600L, // Different mqOffset
-                LocalDateTime.of(2025, 1, 1, 10, 35, 5));
+        RawTradeRecord record2 = new RawTradeRecord();
+        record2.setId(2L);
+        record2.setUnderlyingSecurityId("1021002");
+        record2.setSetDays("T+0");
+        record2.setNetPrice(101.0);
+        record2.setYield(3.0);
+        record2.setYieldType("YTC");
+        record2.setDealSize(1500L);
+        record2.setSide("C003");
+        record2.setDealTime(LocalDateTime.of(2025, 1, 1, 10, 35, 0));
+        record2.setRecvTime(LocalDateTime.of(2025, 1, 1, 10, 35, 5));
 
         rawRecords.add(record1);
         rawRecords.add(record2);
@@ -280,14 +305,14 @@ public class XbondTradeExtractorTest {
         assertEquals("First model exchProductId", "1021001.IB", model1.getExchProductId());
         assertEquals("First model settleSpeed", Integer.valueOf(1), model1.getSettleSpeed());
         assertEquals("First model tradePrice", Double.valueOf(100.5), model1.getTradePrice());
-        assertEquals("First model tradeId", "T001", model1.getTradeId());
+        assertEquals("First model tradeId", "1", model1.getTradeId());
 
         // Second model
         XbondTradeDataModel model2 = (XbondTradeDataModel) result.get(1);
         assertEquals("Second model exchProductId", "1021002.IB", model2.getExchProductId());
         assertEquals("Second model settleSpeed", Integer.valueOf(0), model2.getSettleSpeed());
         assertEquals("Second model tradePrice", Double.valueOf(101.0), model2.getTradePrice());
-        assertEquals("Second model tradeId", "T003", model2.getTradeId());
+        assertEquals("Second model tradeId", "2", model2.getTradeId());
 
         // Both should be valid
         assertTrue("First model should be valid", model1.validate());
@@ -300,16 +325,30 @@ public class XbondTradeExtractorTest {
         List<RawTradeRecord> rawRecords = new ArrayList<>();
 
         // Valid record
-        RawTradeRecord validRecord = new RawTradeRecord(
-                1L, "1021001", 1, 100.5, 2.5, "YTM", 1000L, "X", "T001",
-                LocalDateTime.of(2025, 1, 1, 10, 30, 0), 500L,
-                LocalDateTime.of(2025, 1, 1, 10, 30, 5));
+        RawTradeRecord validRecord = new RawTradeRecord();
+        validRecord.setId(1L);
+        validRecord.setUnderlyingSecurityId("1021001");
+        validRecord.setSetDays("T+1");
+        validRecord.setNetPrice(100.5);
+        validRecord.setYield(2.5);
+        validRecord.setYieldType("YTM");
+        validRecord.setDealSize(1000L);
+        validRecord.setSide("X");
+        validRecord.setDealTime(LocalDateTime.of(2025, 1, 1, 10, 30, 0));
+        validRecord.setRecvTime(LocalDateTime.of(2025, 1, 1, 10, 30, 5));
 
-        // Invalid record (missing required tradeId)
-        RawTradeRecord invalidRecord = new RawTradeRecord(
-                2L, "1021001", 1, 101.0, 3.0, "YTC", 1500L, null, "", // Empty tradeId
-                LocalDateTime.of(2025, 1, 1, 10, 35, 0), 600L,
-                LocalDateTime.of(2025, 1, 1, 10, 35, 5));
+        // Invalid record (missing required dealTime)
+        RawTradeRecord invalidRecord = new RawTradeRecord();
+        invalidRecord.setId(2L);
+        invalidRecord.setUnderlyingSecurityId("1021001");
+        invalidRecord.setSetDays("T+1");
+        invalidRecord.setNetPrice(101.0);
+        invalidRecord.setYield(3.0);
+        invalidRecord.setYieldType("YTC");
+        invalidRecord.setDealSize(1500L);
+        invalidRecord.setSide(null);
+        // Missing dealTime
+        invalidRecord.setRecvTime(LocalDateTime.of(2025, 1, 1, 10, 35, 5));
 
         rawRecords.add(validRecord);
         rawRecords.add(invalidRecord);
@@ -323,23 +362,37 @@ public class XbondTradeExtractorTest {
         assertEquals("Should create one model (invalid skipped)", 1, result.size());
 
         XbondTradeDataModel model = (XbondTradeDataModel) result.get(0);
-        assertEquals("Should be the valid record", "T001", model.getTradeId());
+        assertEquals("Should be the valid record", "1", model.getTradeId());
     }
 
     @Test
     public void testConvertRawRecords_AllRecordsProcessed() throws ETLException {
-        // Setup: records are processed regardless of mqOffset value
+        // Setup: records are processed
         List<RawTradeRecord> rawRecords = new ArrayList<>();
 
-        RawTradeRecord record1 = new RawTradeRecord(
-                1L, "1021001", 1, 100.5, 2.5, "YTM", 1000L, "X", "T001",
-                LocalDateTime.of(2025, 1, 1, 10, 30, 0), null, // null mqOffset
-                LocalDateTime.of(2025, 1, 1, 10, 30, 5));
+        RawTradeRecord record1 = new RawTradeRecord();
+        record1.setId(1L);
+        record1.setUnderlyingSecurityId("1021001");
+        record1.setSetDays("T+1");
+        record1.setNetPrice(100.5);
+        record1.setYield(2.5);
+        record1.setYieldType("YTM");
+        record1.setDealSize(1000L);
+        record1.setSide("X");
+        record1.setDealTime(LocalDateTime.of(2025, 1, 1, 10, 30, 0));
+        record1.setRecvTime(LocalDateTime.of(2025, 1, 1, 10, 30, 5));
 
-        RawTradeRecord record2 = new RawTradeRecord(
-                2L, "1021002", 1, 101.0, 2.6, "YTM", 1500L, "Y", "T002",
-                LocalDateTime.of(2025, 1, 1, 10, 31, 0), 500L, // has mqOffset
-                LocalDateTime.of(2025, 1, 1, 10, 31, 5));
+        RawTradeRecord record2 = new RawTradeRecord();
+        record2.setId(2L);
+        record2.setUnderlyingSecurityId("1021002");
+        record2.setSetDays("T+1");
+        record2.setNetPrice(101.0);
+        record2.setYield(2.6);
+        record2.setYieldType("YTM");
+        record2.setDealSize(1500L);
+        record2.setSide("Y");
+        record2.setDealTime(LocalDateTime.of(2025, 1, 1, 10, 31, 0));
+        record2.setRecvTime(LocalDateTime.of(2025, 1, 1, 10, 31, 5));
 
         rawRecords.add(record1);
         rawRecords.add(record2);

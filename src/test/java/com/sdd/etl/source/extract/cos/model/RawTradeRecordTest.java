@@ -23,12 +23,10 @@ public class RawTradeRecordTest {
     public void testIsValid_ValidRecord_ReturnsTrue() {
         // Setup a valid record
         record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1); // 1 for T+1
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.of(2025, 1, 1, 10, 30, 0));
-        record.setMqOffset(500L);
+        record.setSetDays("T+1"); // "T+1" for T+1
+        record.setNetPrice(100.5);
+        record.setDealSize(1000L);
+        record.setDealTime(LocalDateTime.of(2025, 1, 1, 10, 30, 0));
         record.setRecvTime(LocalDateTime.of(2025, 1, 1, 10, 30, 5));
 
         assertTrue("Valid record should return true", record.isValid());
@@ -37,12 +35,10 @@ public class RawTradeRecordTest {
     @Test
     public void testIsValid_MissingUnderlyingSecurityId_ReturnsFalse() {
         // Missing underlyingSecurityId
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
+        record.setSetDays("T+1");
+        record.setNetPrice(100.5);
+        record.setDealSize(1000L);
+        record.setDealTime(LocalDateTime.now());
         record.setRecvTime(LocalDateTime.now());
 
         assertFalse("Missing underlyingSecurityId should return false", record.isValid());
@@ -52,12 +48,10 @@ public class RawTradeRecordTest {
     public void testIsValid_EmptyUnderlyingSecurityId_ReturnsFalse() {
         // Empty underlyingSecurityId
         record.setUnderlyingSecurityId("");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
+        record.setSetDays("T+1");
+        record.setNetPrice(100.5);
+        record.setDealSize(1000L);
+        record.setDealTime(LocalDateTime.now());
         record.setRecvTime(LocalDateTime.now());
 
         assertFalse("Empty underlyingSecurityId should return false", record.isValid());
@@ -67,275 +61,104 @@ public class RawTradeRecordTest {
     public void testIsValid_WhitespaceUnderlyingSecurityId_ReturnsFalse() {
         // Whitespace-only underlyingSecurityId
         record.setUnderlyingSecurityId("   ");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
+        record.setSetDays("T+1");
+        record.setNetPrice(100.5);
+        record.setDealSize(1000L);
+        record.setDealTime(LocalDateTime.now());
         record.setRecvTime(LocalDateTime.now());
 
         assertFalse("Whitespace-only underlyingSecurityId should return false", record.isValid());
     }
 
     @Test
-    public void testIsValid_MissingUnderlyingSettlementType_ReturnsFalse() {
-        // Missing underlyingSettlementType
+    public void testIsValid_MissingDealTime_ReturnsFalse() {
+        // Missing dealTime
         record.setUnderlyingSecurityId("1021001");
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
-        record.setRecvTime(LocalDateTime.now());
 
-        assertFalse("Missing underlyingSettlementType should return false", record.isValid());
+        assertFalse("Missing dealTime should return false", record.isValid());
     }
 
     @Test
-    public void testIsValid_InvalidUnderlyingSettlementType_ReturnsFalse() {
-        // Invalid underlyingSettlementType (must be 0 or 1)
+    public void testIsValid_MissingNetPrice_ReturnsTrue() {
+        // Missing netPrice is allowed (optional field)
         record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(2); // Invalid value
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
-        record.setRecvTime(LocalDateTime.now());
+        record.setDealTime(LocalDateTime.now());
 
-        assertFalse("Invalid underlyingSettlementType should return false", record.isValid());
+        assertTrue("Missing netPrice should return true (optional field)", record.isValid());
     }
 
     @Test
-    public void testIsValid_UnderlyingSettlementTypeZero_ReturnsTrue() {
-        // Valid underlyingSettlementType = 0 (T+0)
+    public void testIsValid_ZeroNetPrice_ReturnsTrue() {
+        // Zero netPrice is allowed (optional field)
         record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(0); // Valid T+0
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
-        record.setRecvTime(LocalDateTime.now());
+        record.setNetPrice(0.0);
+        record.setDealTime(LocalDateTime.now());
 
-        assertTrue("underlyingSettlementType = 0 should return true", record.isValid());
+        assertTrue("Zero netPrice should return true (optional field)", record.isValid());
     }
 
     @Test
-    public void testIsValid_UnderlyingSettlementTypeOne_ReturnsTrue() {
-        // Valid underlyingSettlementType = 1 (T+1)
+    public void testIsValid_NegativeNetPrice_ReturnsTrue() {
+        // Negative netPrice is allowed (optional field)
         record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1); // Valid T+1
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
-        record.setRecvTime(LocalDateTime.now());
+        record.setNetPrice(-10.5);
+        record.setDealTime(LocalDateTime.now());
 
-        assertTrue("underlyingSettlementType = 1 should return true", record.isValid());
+        assertTrue("Negative netPrice should return true (optional field)", record.isValid());
     }
 
     @Test
-    public void testIsValid_MissingTradePrice_ReturnsTrue() {
-        // Missing tradePrice is now allowed (optional field)
+    public void testIsValid_MissingDealSize_ReturnsTrue() {
+        // Missing dealSize is allowed (optional field)
         record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
-        record.setRecvTime(LocalDateTime.now());
+        record.setDealTime(LocalDateTime.now());
 
-        assertTrue("Missing tradePrice should return true (optional field)", record.isValid());
+        assertTrue("Missing dealSize should return true (optional field)", record.isValid());
     }
 
     @Test
-    public void testIsValid_ZeroTradePrice_ReturnsTrue() {
-        // Zero tradePrice is now allowed (optional field)
+    public void testIsValid_ZeroDealSize_ReturnsTrue() {
+        // Zero dealSize is allowed (optional field)
         record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(0.0);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
-        record.setRecvTime(LocalDateTime.now());
+        record.setDealSize(0L);
+        record.setDealTime(LocalDateTime.now());
 
-        assertTrue("Zero tradePrice should return true (optional field)", record.isValid());
+        assertTrue("Zero dealSize should return true (optional field)", record.isValid());
     }
 
     @Test
-    public void testIsValid_NegativeTradePrice_ReturnsTrue() {
-        // Negative tradePrice is now allowed (optional field)
+    public void testIsValid_NegativeDealSize_ReturnsTrue() {
+        // Negative dealSize is allowed (optional field)
         record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(-10.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
-        record.setRecvTime(LocalDateTime.now());
+        record.setDealSize(-1000L);
+        record.setDealTime(LocalDateTime.now());
 
-        assertTrue("Negative tradePrice should return true (optional field)", record.isValid());
-    }
-
-    @Test
-    public void testIsValid_MissingTradeVolume_ReturnsTrue() {
-        // Missing tradeVolume is now allowed (optional field)
-        record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(100.5);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
-        record.setRecvTime(LocalDateTime.now());
-
-        assertTrue("Missing tradeVolume should return true (optional field)", record.isValid());
-    }
-
-    @Test
-    public void testIsValid_ZeroTradeVolume_ReturnsTrue() {
-        // Zero tradeVolume is now allowed (optional field)
-        record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(100.5);
-        record.setTradeVolume(0L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
-        record.setRecvTime(LocalDateTime.now());
-
-        assertTrue("Zero tradeVolume should return true (optional field)", record.isValid());
-    }
-
-    @Test
-    public void testIsValid_NegativeTradeVolume_ReturnsTrue() {
-        // Negative tradeVolume is now allowed (optional field)
-        record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(100.5);
-        record.setTradeVolume(-1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
-        record.setRecvTime(LocalDateTime.now());
-
-        assertTrue("Negative tradeVolume should return true (optional field)", record.isValid());
-    }
-
-    @Test
-    public void testIsValid_MissingTradeId_ReturnsTrue() {
-        // Missing tradeId is now allowed (optional field)
-        record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
-        record.setRecvTime(LocalDateTime.now());
-
-        assertTrue("Missing tradeId should return true (optional field)", record.isValid());
-    }
-
-    @Test
-    public void testIsValid_EmptyTradeId_ReturnsTrue() {
-        // Empty tradeId is now allowed (optional field)
-        record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
-        record.setRecvTime(LocalDateTime.now());
-
-        assertTrue("Empty tradeId should return true (optional field)", record.isValid());
-    }
-
-    @Test
-    public void testIsValid_MissingTransactTime_ReturnsFalse() {
-        // Missing transactTime
-        record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setMqOffset(500L);
-        record.setRecvTime(LocalDateTime.now());
-
-        assertFalse("Missing transactTime should return false", record.isValid());
-    }
-
-    @Test
-    public void testIsValid_NullTransactTime_ReturnsFalse() {
-        // Null transactTime
-        record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(null);
-        record.setMqOffset(500L);
-        record.setRecvTime(LocalDateTime.now());
-
-        assertFalse("Null transactTime should return false", record.isValid());
-    }
-
-    @Test
-    public void testIsValid_MissingMqOffset_ReturnsTrue() {
-        // Missing mqOffset is now allowed (optional field)
-        record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setRecvTime(LocalDateTime.now());
-
-        assertTrue("Missing mqOffset should return true (optional field)", record.isValid());
-    }
-
-    @Test
-    public void testIsValid_NegativeMqOffset_ReturnsTrue() {
-        // Negative mqOffset is now allowed (optional field)
-        record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(-1L);
-        record.setRecvTime(LocalDateTime.now());
-
-        assertTrue("Negative mqOffset should return true (optional field)", record.isValid());
+        assertTrue("Negative dealSize should return true (optional field)", record.isValid());
     }
 
     @Test
     public void testIsValid_MissingRecvTime_ReturnsTrue() {
-        // Missing recvTime is now allowed (optional field)
+        // Missing recvTime is allowed (optional field)
         record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
+        record.setDealTime(LocalDateTime.now());
 
         assertTrue("Missing recvTime should return true (optional field)", record.isValid());
     }
 
     @Test
-    public void testIsValid_NullRecvTime_ReturnsTrue() {
-        // Null recvTime is now allowed (optional field)
+    public void testIsValid_NullDealTime_ReturnsFalse() {
+        // Null dealTime
         record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
+        record.setDealTime(null);
+
+        assertFalse("Null dealTime should return false", record.isValid());
+    }
+
+    @Test
+    public void testIsValid_NullRecvTime_ReturnsTrue() {
+        // Null recvTime is allowed (optional field)
+        record.setUnderlyingSecurityId("1021001");
+        record.setDealTime(LocalDateTime.now());
         record.setRecvTime(null);
 
         assertTrue("Null recvTime should return true (optional field)", record.isValid());
@@ -346,16 +169,21 @@ public class RawTradeRecordTest {
         // Valid record with all optional fields populated
         record.setId(12345L);
         record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(100.5);
-        record.setTradeYield(2.5);
-        record.setTradeYieldType("YTM");
-        record.setTradeVolume(1000L);
-        record.setTradeSide("C001");
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.of(2025, 1, 1, 10, 30, 0));
-        record.setMqOffset(500L);
+        record.setBondCode("1021001");
+        record.setSymbol("1021001");
+        record.setDealTime(LocalDateTime.of(2025, 1, 1, 10, 30, 0));
+        record.setActDt("20250101");
+        record.setActTm("103000");
+        record.setPreMarket(0);
+        record.setTradeMethod(3);
+        record.setSide("C001");
+        record.setNetPrice(100.5);
+        record.setSetDays("T+1");
+        record.setYield(2.5);
+        record.setYieldType("YTM");
+        record.setDealSize(1000L);
         record.setRecvTime(LocalDateTime.of(2025, 1, 1, 10, 30, 5));
+        record.setHlid("4455380029616468");
 
         assertTrue("Valid record with all fields should return true", record.isValid());
     }
@@ -364,13 +192,7 @@ public class RawTradeRecordTest {
     public void testIsValid_OptionalFieldsNull_ReturnsTrue() {
         // Valid record with only required fields
         record.setUnderlyingSecurityId("1021001");
-        record.setUnderlyingSettlementType(1);
-        record.setTradePrice(100.5);
-        record.setTradeVolume(1000L);
-        record.setTradeId("T20250101-001");
-        record.setTransactTime(LocalDateTime.now());
-        record.setMqOffset(500L);
-        record.setRecvTime(LocalDateTime.now());
+        record.setDealTime(LocalDateTime.now());
 
         // Optional fields remain null
         assertTrue("Record with only required fields should return true", record.isValid());
@@ -398,13 +220,46 @@ public class RawTradeRecordTest {
     @Test
     public void testEquals_EqualRecords_ReturnsTrue() {
         // Two equal records
-        LocalDateTime transactTime = LocalDateTime.of(2025, 1, 1, 10, 30, 0);
+        LocalDateTime dealTime = LocalDateTime.of(2025, 1, 1, 10, 30, 0);
         LocalDateTime recvTime = LocalDateTime.of(2025, 1, 1, 10, 30, 5);
 
-        RawTradeRecord record1 = new RawTradeRecord(12345L, "1021001", 1, 100.5, 2.5, "YTM", 1000L, "C001",
-                "T20250101-001", transactTime, 500L, recvTime);
-        RawTradeRecord record2 = new RawTradeRecord(12345L, "1021001", 1, 100.5, 2.5, "YTM", 1000L, "C001",
-                "T20250101-001", transactTime, 500L, recvTime);
+        RawTradeRecord record1 = new RawTradeRecord();
+        record1.setId(12345L);
+        record1.setUnderlyingSecurityId("1021001");
+        record1.setBondCode("1021001");
+        record1.setSymbol("1021001");
+        record1.setDealTime(dealTime);
+        record1.setActDt("20250101");
+        record1.setActTm("103000");
+        record1.setPreMarket(0);
+        record1.setTradeMethod(3);
+        record1.setSide("C001");
+        record1.setNetPrice(100.5);
+        record1.setSetDays("T+1");
+        record1.setYield(2.5);
+        record1.setYieldType("YTM");
+        record1.setDealSize(1000L);
+        record1.setRecvTime(recvTime);
+        record1.setHlid("4455380029616468");
+
+        RawTradeRecord record2 = new RawTradeRecord();
+        record2.setId(12345L);
+        record2.setUnderlyingSecurityId("1021001");
+        record2.setBondCode("1021001");
+        record2.setSymbol("1021001");
+        record2.setDealTime(dealTime);
+        record2.setActDt("20250101");
+        record2.setActTm("103000");
+        record2.setPreMarket(0);
+        record2.setTradeMethod(3);
+        record2.setSide("C001");
+        record2.setNetPrice(100.5);
+        record2.setSetDays("T+1");
+        record2.setYield(2.5);
+        record2.setYieldType("YTM");
+        record2.setDealSize(1000L);
+        record2.setRecvTime(recvTime);
+        record2.setHlid("4455380029616468");
 
         assertTrue("Equal records should return true", record1.equals(record2));
     }
@@ -412,13 +267,18 @@ public class RawTradeRecordTest {
     @Test
     public void testEquals_DifferentIds_ReturnsFalse() {
         // Different id field
-        LocalDateTime transactTime = LocalDateTime.of(2025, 1, 1, 10, 30, 0);
+        LocalDateTime dealTime = LocalDateTime.of(2025, 1, 1, 10, 30, 0);
         LocalDateTime recvTime = LocalDateTime.of(2025, 1, 1, 10, 30, 5);
 
-        RawTradeRecord record1 = new RawTradeRecord(12345L, "1021001", 1, 100.5, 2.5, "YTM", 1000L, "C001",
-                "T20250101-001", transactTime, 500L, recvTime);
-        RawTradeRecord record2 = new RawTradeRecord(67890L, "1021001", 1, 100.5, 2.5, "YTM", 1000L, "C001",
-                "T20250101-001", transactTime, 500L, recvTime);
+        RawTradeRecord record1 = new RawTradeRecord();
+        record1.setId(12345L);
+        record1.setUnderlyingSecurityId("1021001");
+        record1.setDealTime(dealTime);
+
+        RawTradeRecord record2 = new RawTradeRecord();
+        record2.setId(67890L);
+        record2.setUnderlyingSecurityId("1021001");
+        record2.setDealTime(dealTime);
 
         assertFalse("Different ids should return false", record1.equals(record2));
     }
@@ -426,13 +286,17 @@ public class RawTradeRecordTest {
     @Test
     public void testEquals_DifferentUnderlyingSecurityId_ReturnsFalse() {
         // Different underlyingSecurityId field
-        LocalDateTime transactTime = LocalDateTime.of(2025, 1, 1, 10, 30, 0);
-        LocalDateTime recvTime = LocalDateTime.of(2025, 1, 1, 10, 30, 5);
+        LocalDateTime dealTime = LocalDateTime.of(2025, 1, 1, 10, 30, 0);
 
-        RawTradeRecord record1 = new RawTradeRecord(12345L, "1021001", 1, 100.5, 2.5, "YTM", 1000L, "C001",
-                "T20250101-001", transactTime, 500L, recvTime);
-        RawTradeRecord record2 = new RawTradeRecord(12345L, "1021002", 1, 100.5, 2.5, "YTM", 1000L, "C001",
-                "T20250101-001", transactTime, 500L, recvTime);
+        RawTradeRecord record1 = new RawTradeRecord();
+        record1.setId(12345L);
+        record1.setUnderlyingSecurityId("1021001");
+        record1.setDealTime(dealTime);
+
+        RawTradeRecord record2 = new RawTradeRecord();
+        record2.setId(12345L);
+        record2.setUnderlyingSecurityId("1021002");
+        record2.setDealTime(dealTime);
 
         assertFalse("Different underlyingSecurityId should return false", record1.equals(record2));
     }
@@ -440,13 +304,46 @@ public class RawTradeRecordTest {
     @Test
     public void testHashCode_EqualRecords_SameHashCode() {
         // Two equal records should have same hashCode
-        LocalDateTime transactTime = LocalDateTime.of(2025, 1, 1, 10, 30, 0);
+        LocalDateTime dealTime = LocalDateTime.of(2025, 1, 1, 10, 30, 0);
         LocalDateTime recvTime = LocalDateTime.of(2025, 1, 1, 10, 30, 5);
 
-        RawTradeRecord record1 = new RawTradeRecord(12345L, "1021001", 1, 100.5, 2.5, "YTM", 1000L, "C001",
-                "T20250101-001", transactTime, 500L, recvTime);
-        RawTradeRecord record2 = new RawTradeRecord(12345L, "1021001", 1, 100.5, 2.5, "YTM", 1000L, "C001",
-                "T20250101-001", transactTime, 500L, recvTime);
+        RawTradeRecord record1 = new RawTradeRecord();
+        record1.setId(12345L);
+        record1.setUnderlyingSecurityId("1021001");
+        record1.setBondCode("1021001");
+        record1.setSymbol("1021001");
+        record1.setDealTime(dealTime);
+        record1.setActDt("20250101");
+        record1.setActTm("103000");
+        record1.setPreMarket(0);
+        record1.setTradeMethod(3);
+        record1.setSide("C001");
+        record1.setNetPrice(100.5);
+        record1.setSetDays("T+1");
+        record1.setYield(2.5);
+        record1.setYieldType("YTM");
+        record1.setDealSize(1000L);
+        record1.setRecvTime(recvTime);
+        record1.setHlid("4455380029616468");
+
+        RawTradeRecord record2 = new RawTradeRecord();
+        record2.setId(12345L);
+        record2.setUnderlyingSecurityId("1021001");
+        record2.setBondCode("1021001");
+        record2.setSymbol("1021001");
+        record2.setDealTime(dealTime);
+        record2.setActDt("20250101");
+        record2.setActTm("103000");
+        record2.setPreMarket(0);
+        record2.setTradeMethod(3);
+        record2.setSide("C001");
+        record2.setNetPrice(100.5);
+        record2.setSetDays("T+1");
+        record2.setYield(2.5);
+        record2.setYieldType("YTM");
+        record2.setDealSize(1000L);
+        record2.setRecvTime(recvTime);
+        record2.setHlid("4455380029616468");
 
         assertEquals("Equal records should have same hashCode", record1.hashCode(), record2.hashCode());
     }
@@ -454,17 +351,17 @@ public class RawTradeRecordTest {
     @Test
     public void testToString_ContainsExpectedFields() {
         // toString should include key fields
-        LocalDateTime transactTime = LocalDateTime.of(2025, 1, 1, 10, 30, 0);
+        LocalDateTime dealTime = LocalDateTime.of(2025, 1, 1, 10, 30, 0);
         LocalDateTime recvTime = LocalDateTime.of(2025, 1, 1, 10, 30, 5);
 
-        RawTradeRecord record = new RawTradeRecord(12345L, "1021001", 1, 100.5, 2.5, "YTM", 1000L, "C001",
-                "T20250101-001", transactTime, 500L, recvTime);
+        RawTradeRecord record = new RawTradeRecord();
+        record.setId(12345L);
+        record.setUnderlyingSecurityId("1021001");
+        record.setDealTime(dealTime);
+
         String str = record.toString();
 
         assertTrue("toString should contain record id", str.contains("id=12345"));
         assertTrue("toString should contain underlyingSecurityId", str.contains("underlyingSecurityId='1021001'"));
-        assertTrue("toString should contain underlyingSettlementType", str.contains("underlyingSettlementType=1"));
-        assertTrue("toString should contain tradePrice", str.contains("tradePrice=100.5"));
-        assertTrue("toString should contain tradeVolume", str.contains("tradeVolume=1000"));
     }
 }

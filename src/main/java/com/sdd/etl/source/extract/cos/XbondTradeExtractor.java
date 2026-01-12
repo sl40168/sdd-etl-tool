@@ -193,21 +193,21 @@ public class XbondTradeExtractor extends CosExtractor<RawTradeRecord> {
             mapRawRecordToModel(record, model);
 
             // Set timestamps
-            model.setEventTime(record.getTransactTime());
+            model.setEventTime(record.getDealTime());
 
-            // Set receiveTime: use recvTime if available, otherwise copy from transactTime
+            // Set receiveTime: use recvTime if available, otherwise copy from dealTime
             if (record.getRecvTime() != null) {
                 model.setReceiveTime(record.getRecvTime());
             } else {
-                model.setReceiveTime(record.getTransactTime());
+                model.setReceiveTime(record.getDealTime());
             }
 
             // Set business date from stored currentBusinessDate (set by extract method)
-            // If not available, fall back to transactTime
+            // If not available, fall back to dealTime
             if (currentBusinessDate != null) {
                 model.setBusinessDate(currentBusinessDate);
-            } else if (record.getTransactTime() != null) {
-                String businessDate = record.getTransactTime()
+            } else if (record.getDealTime() != null) {
+                String businessDate = record.getDealTime()
                         .format(DateTimeFormatter.ofPattern("yyyy.MM.dd"));
                 model.setBusinessDate(businessDate);
             }
@@ -237,19 +237,26 @@ public class XbondTradeExtractor extends CosExtractor<RawTradeRecord> {
         }
         model.setExchProductId(securityId);
 
-        // Map settlement type to settleSpeed (0=T+0, 1=T+1)
-        Integer settlementType = record.getUnderlyingSettlementType();
-        if (settlementType != null) {
-            model.setSettleSpeed(settlementType);
+        // Map settlement type to settleSpeed (map from set_days string to integer)
+        String setDays = record.getSetDays();
+        if (setDays != null) {
+            if (setDays.equals("T+1")) {
+                model.setSettleSpeed(1);
+            } else if (setDays.equals("T+0")) {
+                model.setSettleSpeed(0);
+            }
         }
 
         // Map trade-specific fields
-        model.setTradePrice(record.getTradePrice());
-        model.setTradeYield(record.getTradeYield());
-        model.setTradeYieldType(record.getTradeYieldType());
-        model.setTradeVolume(record.getTradeVolume());
-        model.setTradeSide(mapTradeSide(record.getTradeSide()));
-        model.setTradeId(record.getTradeId());
+        model.setTradePrice(record.getNetPrice());
+        model.setTradeYield(record.getYield());
+        model.setTradeYieldType(record.getYieldType());
+        model.setTradeVolume(record.getDealSize());
+        model.setTradeSide(mapTradeSide(record.getSide()));
+        // Use CSV 'id' field as tradeId since both represent unique transaction identifier
+        if (record.getId() != null) {
+            model.setTradeId(String.valueOf(record.getId()));
+        }
     }
 
     /**
