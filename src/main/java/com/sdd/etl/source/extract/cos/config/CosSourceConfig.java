@@ -1,8 +1,6 @@
 package com.sdd.etl.source.extract.cos.config;
 
 import com.sdd.etl.config.ETConfiguration;
-import java.net.URL;
-import java.net.MalformedURLException;
 
 /**
  * Configuration for Tencent COS data source.
@@ -240,7 +238,6 @@ public class CosSourceConfig extends ETConfiguration.SourceConfig {
      * - Both provided (authenticated access) - validated for placeholders
      * - Both omitted (anonymous access)
      * - Partially provided (invalid - must use either all or none)
-     * Endpoint must be a valid URL format.
      * Bucket name must follow COS naming conventions (lowercase letters, numbers, hyphens).
      *
      * @return true if configuration is valid
@@ -276,13 +273,6 @@ public class CosSourceConfig extends ETConfiguration.SourceConfig {
             if (isPlaceholderCredential(secretId) || isPlaceholderCredential(secretKey)) {
                 return false;
             }
-        }
-
-        // Validate endpoint URL format
-        try {
-            new URL(getEndpoint());
-        } catch (MalformedURLException e) {
-            return false;
         }
 
         // Validate bucket name: lowercase letters, numbers, hyphens

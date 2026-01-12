@@ -148,16 +148,16 @@ public class CosSourceConfigTest {
 
     @Test
     public void testIsValid_InvalidEndpointUrl_ReturnsFalse() {
-        // Invalid endpoint URL format
+        // Empty endpoint is invalid (required field)
         config.setName("cos-source");
         config.setType("cos");
         config.setConnectionString("cos://example.com");
-        config.setEndpoint("not-a-valid-url");
+        config.setEndpoint("");
         config.setBucket("my-bucket");
         config.setSecretId("AKIDexample");
         config.setSecretKey("secret-key-example");
 
-        assertFalse("Invalid endpoint URL should return false", config.isValid());
+        assertFalse("Empty endpoint should return false", config.isValid());
     }
 
     @Test

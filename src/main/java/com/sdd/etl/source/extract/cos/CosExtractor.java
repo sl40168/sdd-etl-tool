@@ -447,6 +447,16 @@ public abstract class CosExtractor<R> implements Extractor {
      * @throws ETLException if file listing fails
      */
     protected List<CosFileMetadata> selectFiles(ETLContext context) throws ETLException {
+        // Validate that setup() has been called
+        if (cosClient == null) {
+            throw new ETLException("COS_EXTRACTOR", DateUtils.formatDate(context.getCurrentDate()),
+                    "COS client not initialized. Call setup() before extract().");
+        }
+        if (sourceConfig == null) {
+            throw new ETLException("COS_EXTRACTOR", DateUtils.formatDate(context.getCurrentDate()),
+                    "Source configuration not found. Ensure context contains valid COS configuration.");
+        }
+        
         String category = getCategory();
         String businessDate = formatBusinessDateForPath(DateUtils.formatDate(context.getCurrentDate()));
         String prefix = category + "/" + businessDate + "/";

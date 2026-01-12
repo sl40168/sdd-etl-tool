@@ -3,6 +3,7 @@ package com.sdd.etl.subprocess;
 import com.sdd.etl.ETLException;
 import com.sdd.etl.context.ETLContext;
 import com.sdd.etl.context.SubprocessType;
+import com.sdd.etl.source.extract.Extractor;
 import com.sdd.etl.source.extract.ExtractorFactory;
 import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.model.SourceDataModel;
@@ -188,7 +189,9 @@ public abstract class ExtractSubprocess implements SubprocessInterface {
             for (ETConfiguration.SourceConfig source : sources) {
                 futures.add(executorService.submit(() -> {
                     try {
-                        return ExtractorFactory.createExtractor(source).extract(context);
+                        Extractor extractor = ExtractorFactory.createExtractor(source);
+                        extractor.setup(context);
+                        return extractor.extract(context);
                     } catch (ETLException e) {
                         throw new ExecutionException(e);
                     }
