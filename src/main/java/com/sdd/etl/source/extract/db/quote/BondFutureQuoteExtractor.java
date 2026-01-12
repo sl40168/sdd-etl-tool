@@ -149,18 +149,32 @@ public class BondFutureQuoteExtractor extends DatabaseExtractor {
 
     /**
      * Parses action_date (YYYYMMDD) and action_time (HHMMSSmmm) into LocalDateTime.
+     *
+     * <p>Time format: HHmmssSSS where:
+     * <ul>
+     *   <li>HH = 2-digit hour (00-23)</li>
+     *   <li>mm = 2-digit minute (00-59)</li>
+     *   <li>ss = 2-digit second (00-59)</li>
+     *   <li>SSS = 3-digit millisecond (000-999)</li>
+     * </ul>
+     *
+     * <p>Examples:
+     * <ul>
+     *   <li>93000500 (8 digits) -> 093000500 (9 digits) -> 09:30:00.500</li>
+     *   <li>153000400 (9 digits) -> 153000400 (unchanged) -> 15:30:00.400</li>
+     * </ul>
      */
     private LocalDateTime parseEventTime(int date, int time) {
-        // time is HHMHmmSSS (9 digits) or HMMSSmmm (8 digits) or less?
         // Spec: HOUR * 10000000 + MINUTE * 100000 + SECOND * 1000 + MILLISECOND
-        // Example: 93000400 -> 09:30:00.400 -> 93000400
-        // If hour is 9, it's 930... (8 digits). If 15, 1530... (9 digits).
+        // Example: 93000500 -> 09:30:00.500
 
         String dStr = String.valueOf(date);
         String tStr = String.valueOf(time);
 
-        // Pad time to 9 digits with leading zeros if needed?
-        // 93000400 -> 093000400
+        // Pad time to 9 digits with leading zeros if needed
+        // 93000500 (8 digits) -> 093000500 (9 digits)
+        // The format is HHmmssSSS (2+2+2+3 = 9 digits)
+        // If time is 8 digits, hour was single digit (9h -> 09h)
         while (tStr.length() < 9) {
             tStr = "0" + tStr;
         }
@@ -170,7 +184,8 @@ public class BondFutureQuoteExtractor extends DatabaseExtractor {
             return LocalDateTime.parse(dtStr, SHORT_TIME_FORMATTER);
             // format: yyyyMMddHHmmssSSS -> 8 + 9 = 17 chars
         } catch (Exception e) {
-            logger.error("Failed to parse date {} time {}", date, time);
+            logger.error("Failed to parse date_time string: '{}', date='{}', time='{}', dtStr='{}', length={}, pattern='{}', error={}",
+                       dtStr, date, time, dtStr, dtStr.length(), SHORT_TIME_FORMATTER.toString(), e.getMessage(), e);
             return null;
         }
     }

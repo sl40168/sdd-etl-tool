@@ -120,4 +120,68 @@ public class BondFutureQuoteExtractorTest {
         when(config.findSourceConfig(anyString())).thenReturn(null);
         extractor.setup(context);
     }
+
+    @Test
+    public void testParseEventTime_8DigitTime_PadsTo9Digits() throws Exception {
+        // Given: 8-digit time value (e.g., 93000400 representing 9:30:00.400)
+        // The format expects HHmmssSSS (9 digits total)
+        int date = 20250728;
+        int time = 93000400; // 8 digits, represents 9h:30m:00s:400ms
+
+        // When: Use reflection to access private method for testing
+        java.lang.reflect.Method method = BondFutureQuoteExtractor.class.getDeclaredMethod("parseEventTime", int.class, int.class);
+        method.setAccessible(true);
+        java.time.LocalDateTime result = (java.time.LocalDateTime) method.invoke(extractor, date, time);
+
+        // Then: Should parse successfully with padded leading zero
+        assertNotNull("Result should not be null", result);
+        assertEquals("Year should be 2025", 2025, result.getYear());
+        assertEquals("Month should be July", 7, result.getMonthValue());
+        assertEquals("Day should be 28", 28, result.getDayOfMonth());
+        assertEquals("Hour should be 9", 9, result.getHour());
+        assertEquals("Minute should be 30", 30, result.getMinute());
+        assertEquals("Second should be 0", 0, result.getSecond());
+        assertEquals("Millisecond should be 400", 400, result.getNano() / 1_000_000);
+    }
+
+    @Test
+    public void testParseEventTime_9DigitTime_NoPadding() throws Exception {
+        // Given: 9-digit time value (e.g., 153000400 representing 15:30:00.400)
+        int date = 20231201;
+        int time = 153000400; // 9 digits, represents 15h:30m:00s:400ms
+
+        // When: Use reflection to access private method for testing
+        java.lang.reflect.Method method = BondFutureQuoteExtractor.class.getDeclaredMethod("parseEventTime", int.class, int.class);
+        method.setAccessible(true);
+        java.time.LocalDateTime result = (java.time.LocalDateTime) method.invoke(extractor, date, time);
+
+        // Then: Should parse successfully without padding
+        assertNotNull("Result should not be null", result);
+        assertEquals("Hour should be 15", 15, result.getHour());
+        assertEquals("Minute should be 30", 30, result.getMinute());
+        assertEquals("Second should be 0", 0, result.getSecond());
+        assertEquals("Millisecond should be 400", 400, result.getNano() / 1_000_000);
+    }
+
+    @Test
+    public void testParseEventTime_UserExample() throws Exception {
+        // Given: User's example that supposedly fails
+        // dtStr = 20250728093000400
+        // This is 17 chars: 20250728 (8) + 093000400 (9)
+        int date = 20250728;
+        int time = 93000400; // Should pad to 093000400
+
+        // When: Use reflection to access private method for testing
+        java.lang.reflect.Method method = BondFutureQuoteExtractor.class.getDeclaredMethod("parseEventTime", int.class, int.class);
+        method.setAccessible(true);
+        java.time.LocalDateTime result = (java.time.LocalDateTime) method.invoke(extractor, date, time);
+
+        // Then: Should parse successfully
+        assertNotNull("Result should not be null for dtStr='20250728093000400'", result);
+        assertEquals("Year should be 2025", 2025, result.getYear());
+        assertEquals("Hour should be 9", 9, result.getHour());
+        assertEquals("Minute should be 30", 30, result.getMinute());
+        assertEquals("Second should be 0", 0, result.getSecond());
+        assertEquals("Millisecond should be 400", 400, result.getNano() / 1_000_000);
+    }
 }
