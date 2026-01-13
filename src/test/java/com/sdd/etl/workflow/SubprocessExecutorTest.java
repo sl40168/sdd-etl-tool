@@ -100,7 +100,7 @@ public class SubprocessExecutorTest {
         
         when(mockTransform.execute(spyContext)).thenAnswer(invocation -> {
             spyContext.setTransformedDataCount(95);
-            spyContext.setTransformedData(new Object());
+            spyContext.setTransformedData(Collections.emptyList());
             return 95;
         });
         

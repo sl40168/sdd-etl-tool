@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 /**
@@ -71,8 +72,7 @@ public class LoadSubprocess implements SubprocessInterface {
             context.setDolphinDBLoader(loader);
 
             // Get transformed data from context
-            @SuppressWarnings("unchecked")
-            List<TargetDataModel> transformedData = (List<TargetDataModel>) context.getTransformedData();
+            List<TargetDataModel> transformedData = context.getTransformedData();
 
             if (transformedData == null || transformedData.isEmpty()) {
                 logger.warn("LoadSubprocess: No transformed data to load");
@@ -152,16 +152,21 @@ public class LoadSubprocess implements SubprocessInterface {
      * @throws Exception if parsing fails or no DolphinDB target found
      */
     private LoaderConfiguration parseLoaderConfiguration(ETLContext context) throws Exception {
+        logger.debug("LoadSubprocess: Parsing loader configuration");
+
         // Get the first DolphinDB target from configuration
         ETConfiguration.TargetConfig targetConfig = findDolphinDBTarget(context);
-        
+
         if (targetConfig == null) {
             throw new Exception("No DolphinDB target found in configuration. "
                     + "Please add a [target] section with type=dolphindb in config file.");
         }
-        
+
+        logger.debug("LoadSubprocess: Found target config - name={}, type={}, connectionString={}",
+                targetConfig.getName(), targetConfig.getType(), targetConfig.getConnectionString());
+
         LoaderConfiguration config = new LoaderConfiguration();
-        
+
         // Load standard fields
         if (targetConfig.getConnectionString() != null && !targetConfig.getConnectionString().isEmpty()) {
             // If connectionString is provided, parse it (format: host:port)
@@ -178,20 +183,26 @@ public class LoadSubprocess implements SubprocessInterface {
                 }
             }
         }
-        
+
         config.setBatchSize(targetConfig.getBatchSize());
-        
+
         // Load DolphinDB-specific properties from the properties map
         // These are stored as extra properties in TargetConfig
         java.util.Map<String, String> properties = targetConfig.getProperties();
-        
+
+        logger.debug("LoadSubprocess: Properties map size: {}", properties != null ? properties.size() : 0);
+
         if (properties != null) {
+            for (Map.Entry<String, String> entry : properties.entrySet()) {
+                logger.debug("LoadSubprocess: Property - {} = {}", entry.getKey(), entry.getValue());
+            }
+
             // Check for DolphinDB-specific properties with ddb. prefix
             String ddbHost = properties.get("ddb.host");
             if (ddbHost != null && !ddbHost.trim().isEmpty()) {
                 config.setHost(ddbHost);
             }
-            
+
             String ddbPort = properties.get("ddb.port");
             if (ddbPort != null && !ddbPort.trim().isEmpty()) {
                 try {
@@ -200,23 +211,26 @@ public class LoadSubprocess implements SubprocessInterface {
                     // Keep default or use connectionString port
                 }
             }
-            
+
             String ddbUser = properties.get("ddb.user");
             if (ddbUser != null && !ddbUser.trim().isEmpty()) {
                 config.setUsername(ddbUser);
             }
-            
+
             String ddbPassword = properties.get("ddb.password");
             if (ddbPassword != null && !ddbPassword.trim().isEmpty()) {
                 config.setPassword(ddbPassword);
             }
-            
+
             String ddbDatabase = properties.get("ddb.database");
             if (ddbDatabase != null && !ddbDatabase.trim().isEmpty()) {
                 config.setDatabase(ddbDatabase);
             }
         }
-        
+
+        logger.info("LoadSubprocess: Loader configuration - host={}, port={}, username={}",
+                config.getHost(), config.getPort(), config.getUsername());
+
         return config;
     }
     
@@ -228,14 +242,27 @@ public class LoadSubprocess implements SubprocessInterface {
      */
     private ETConfiguration.TargetConfig findDolphinDBTarget(ETLContext context) {
         if (context.getConfig() == null || context.getConfig().getTargets() == null) {
+            logger.warn("LoadSubprocess: Config or targets is null");
             return null;
         }
 
+        logger.debug("LoadSubprocess: Searching for DolphinDB target among {} targets",
+                context.getConfig().getTargets().size());
+
         for (ETConfiguration.TargetConfig target : context.getConfig().getTargets()) {
+            logger.debug("LoadSubprocess: Checking target - name={}, type={}",
+                    target.getName(), target.getType());
             if ("dolphindb".equalsIgnoreCase(target.getType())) {
+                logger.info("LoadSubprocess: Found DolphinDB target: {}", target.getName());
                 return target;
             }
         }
+
+        logger.warn("LoadSubprocess: No DolphinDB target found. Available types: {}",
+                context.getConfig().getTargets().stream()
+                        .map(ETConfiguration.TargetConfig::getType)
+                        .reduce((a, b) -> a + ", " + b)
+                        .orElse("none"));
         return null;
     }
 

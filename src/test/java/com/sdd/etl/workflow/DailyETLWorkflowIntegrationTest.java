@@ -84,7 +84,7 @@ public class DailyETLWorkflowIntegrationTest {
                     public int execute(ETLContext context) throws ETLException {
                         // Simulate transformation of 95 records (5 rejected)
                         context.setTransformedDataCount(95);
-                        context.setTransformedData(new Object());
+                        context.setTransformedData(Collections.emptyList());
                         return 95;
                     }
                     
@@ -365,7 +365,7 @@ public class DailyETLWorkflowIntegrationTest {
                     @Override
                     public int execute(ETLContext context) throws ETLException {
                         context.setTransformedDataCount(95);
-                        context.setTransformedData(new Object());
+                        context.setTransformedData(Collections.emptyList());
                         return 95;
                     }
                     

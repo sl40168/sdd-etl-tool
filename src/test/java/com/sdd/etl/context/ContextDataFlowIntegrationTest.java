@@ -3,6 +3,7 @@ package com.sdd.etl.context;
 import com.sdd.etl.ETLException;
 import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.model.SourceDataModel;
+import com.sdd.etl.model.TargetDataModel;
 import com.sdd.etl.subprocess.SubprocessInterface;
 import com.sdd.etl.util.DateUtils;
 import java.time.LocalDate;
@@ -100,7 +101,7 @@ public class ContextDataFlowIntegrationTest {
                 assertEquals("Extracted data count should be 100", 100, ctx.getExtractedDataCount());
 
                 // Simulate transformation of 95 records (5 rejected)
-                Object transformedData = new Object();
+                List<TargetDataModel> transformedData = new ArrayList<>();
                 ctx.setTransformedDataCount(95);
                 ctx.setTransformedData(transformedData);
                 return 95;
@@ -136,7 +137,7 @@ public class ContextDataFlowIntegrationTest {
     public void testLoadReadsFromAndWritesToContext() throws ETLException {
         // Given
         // First, setup transform data in context
-        Object transformedData = new Object();
+        List<TargetDataModel> transformedData = new ArrayList<>();
         context.setTransformedDataCount(95);
         context.setTransformedData(transformedData);
         context.setCurrentSubprocess(SubprocessType.LOAD);

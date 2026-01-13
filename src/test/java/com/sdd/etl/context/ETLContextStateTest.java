@@ -2,6 +2,7 @@ package com.sdd.etl.context;
 
 import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.model.SourceDataModel;
+import com.sdd.etl.model.TargetDataModel;
 import org.junit.Test;
 import org.junit.Before;
 import com.sdd.etl.util.DateUtils;
@@ -63,7 +64,7 @@ public class ETLContextStateTest {
         // When
         context.setCurrentSubprocess(SubprocessType.TRANSFORM);
         context.setTransformedDataCount(95);
-        context.setTransformedData(new Object());
+        context.setTransformedData(Collections.emptyList());
 
         // Then
         assertEquals("Current subprocess should be TRANSFORM", SubprocessType.TRANSFORM, context.getCurrentSubprocess());
@@ -81,7 +82,7 @@ public class ETLContextStateTest {
     @Test
     public void testStateTransition_TransformToLoad() {
         // Given
-        Object transformedData = new Object();
+        List<TargetDataModel> transformedData = new ArrayList<>();
         context.setCurrentSubprocess(SubprocessType.TRANSFORM);
         context.setTransformedDataCount(95);
         context.setTransformedData(transformedData);
@@ -150,7 +151,7 @@ public class ETLContextStateTest {
         context.setExtractedDataCount(100);
         context.setExtractedData(Collections.emptyList());
         context.setTransformedDataCount(95);
-        context.setTransformedData(new Object());
+        context.setTransformedData(Collections.emptyList());
         context.setLoadedDataCount(95);
         context.setValidationPassed(true);
         context.setCleanupPerformed(true);
@@ -178,7 +179,7 @@ public class ETLContextStateTest {
     public void testStateTransitions_MaintainDataIntegrity() {
         // Simulate complete ETL workflow state transitions
         List<SourceDataModel> extractedData = new ArrayList<>();
-        Object transformedData = new Object();
+        List<TargetDataModel> transformedData = new ArrayList<>();
 
         // EXTRACT phase
         context.setCurrentSubprocess(SubprocessType.EXTRACT);

@@ -1,6 +1,7 @@
 package com.sdd.etl.context;
 
 import com.sdd.etl.model.SourceDataModel;
+import com.sdd.etl.model.TargetDataModel;
 import org.junit.Test;
 import org.junit.Before;
 
@@ -113,7 +114,7 @@ public class ETLContextTest {
 
     @Test
     public void testSetTransformedData_SetsValue() {
-        Object data = "transformed data";
+        List<TargetDataModel> data = new ArrayList<>();
         context.setTransformedData(data);
 
         assertEquals("Transformed data should be set", data, context.getTransformedData());

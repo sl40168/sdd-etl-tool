@@ -152,14 +152,14 @@ public class TransformSubprocess implements SubprocessInterface {
             }
 
             // Collect results
-            Map<Class<? extends SourceDataModel>, List<? extends TargetDataModel>> allTransformedData = new HashMap<>();
+            List<TargetDataModel> allTransformedData = new LinkedList<>();
             int totalTransformed = 0;
 
             for (Future<TransformResult> future : futures) {
                 try {
                     TransformResult result = future.get();
                     if (result.isSuccess()) {
-                        allTransformedData.put(result.getDataType(), result.getTransformedData());
+                        allTransformedData.addAll(result.getTransformedData());
                         totalTransformed += result.getRecordCount();
                     } else {
                         throw new TransformationException(

@@ -6,6 +6,8 @@ import com.sdd.etl.context.ContextManager;
 import com.sdd.etl.context.ETLContext;
 import com.sdd.etl.util.DateUtils;
 import java.time.LocalDate;
+import java.util.Collections;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -42,7 +44,7 @@ public class LoadSubprocessTest {
     public void testValidateContext_ConfigMissing_Throws() {
         LoadSubprocess load = new LoadSubprocess();
 
-        context.setTransformedData(new Object());
+        context.setTransformedData(Collections.emptyList());
         context.setConfig(null);  // config is null
 
         // Should throw exception due to missing config

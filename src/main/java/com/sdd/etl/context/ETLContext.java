@@ -2,6 +2,7 @@ package com.sdd.etl.context;
 
 import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.model.SourceDataModel;
+import com.sdd.etl.model.TargetDataModel;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -139,8 +140,8 @@ public class ETLContext {
      *
      * @return transformed data, or null if not set
      */
-    public Object getTransformedData() {
-        return data.get(ContextConstants.TRANSFORMED_DATA);
+    public List<TargetDataModel> getTransformedData() {
+        return (List<TargetDataModel>) data.get(ContextConstants.TRANSFORMED_DATA);
     }
 
     /**
@@ -148,7 +149,7 @@ public class ETLContext {
      *
      * @param transformedData transformed data objects
      */
-    public void setTransformedData(Object transformedData) {
+    public void setTransformedData(List<? extends TargetDataModel> transformedData) {
         data.put(ContextConstants.TRANSFORMED_DATA, transformedData);
     }
 
