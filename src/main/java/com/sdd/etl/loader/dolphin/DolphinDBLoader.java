@@ -1,16 +1,19 @@
 package com.sdd.etl.loader.dolphin;
 
+import cn.hutool.core.collection.CollUtil;
 import com.sdd.etl.loader.api.Loader;
-import com.sdd.etl.loader.api.exceptions.LoaderException;
 import com.sdd.etl.loader.api.exceptions.DataLoadingException;
+import com.sdd.etl.loader.api.exceptions.LoaderException;
 import com.sdd.etl.loader.config.LoaderConfiguration;
-import com.sdd.etl.model.TargetDataModel;
 import com.sdd.etl.loader.dolphin.sort.ExternalSorter;
+import com.sdd.etl.model.TargetDataModel;
+import com.xxdb.DBConnection;
+import com.xxdb.data.Entity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.xxdb.DBConnection;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Main DolphinDB loader implementation.
@@ -106,7 +109,8 @@ public class DolphinDBLoader implements Loader {
 
             logger.info("Data loading completed. Total records loaded: {}", data.size());
         } catch (Exception e) {
-            throw new DataLoadingException("Failed to load data to DolphinDB: " + e.getMessage(), e);
+            throw new DataLoadingException("Failed to load data to DolphinDB: " + e.getMessage(),
+                e);
         }
     }
 
@@ -142,27 +146,16 @@ public class DolphinDBLoader implements Loader {
             DBConnection conn = connection.getConnection();
 
             // Convert to column-based format
-            Map<String, Object> columns = DataConverter.convertSingleRecordToColumns(record);
+            List<Entity> columns = DataConverter.convertSingleRecordToColumns(record);
 
             // Build insert statement
             StringBuilder insertSql = new StringBuilder();
-            insertSql.append("tableInsert(").append(tableName);
-
-            // Convert columns to DolphinDB format and build argument list
-            List<Object> args = new ArrayList<>();
-
-            for (Map.Entry<String, Object> entry : columns.entrySet()) {
-                args.add(entry.getValue());
-            }
-
-            // Execute insert
-            if (!args.isEmpty()) {
-                String argStr = args.toString();
-                insertSql.append(", ").append(argStr.substring(1, argStr.length() - 1));
-                insertSql.append(")");
-
-                conn.run(insertSql.toString());
+            insertSql.append("tableInsert{").append(tableName).append("}");
+            if (CollUtil.isNotEmpty(columns)) {
+                conn.run(insertSql.toString(), columns);
                 logger.debug("Inserted 1 record to table {}", tableName);
+            } else {
+                logger.warn("Columns value is empty for {}.", record);
             }
         } catch (Exception e) {
             throw new DataLoadingException("Failed to load data to table " + tableName + ": " + e.getMessage(), e);
@@ -204,8 +197,7 @@ public class DolphinDBLoader implements Loader {
     }
 
     @SuppressWarnings("unchecked")
-    private int compareByField(TargetDataModel a, TargetDataModel b, String fieldName)
-            throws Exception {
+    private int compareByField(TargetDataModel a, TargetDataModel b, String fieldName) throws Exception {
         Object valueA = getFieldValue(a, fieldName);
         Object valueB = getFieldValue(b, fieldName);
 
