@@ -172,7 +172,7 @@ public class DailyETLWorkflow {
         subprocesses.add(new LoadSubprocess());
 
         // Step 4: Validate - Validate loaded data (abstract - needs concrete implementation)
-        // subprocesses.add(new ValidateSubprocess()); // TODO: Add concrete validation implementation
+        subprocesses.add(new ValidateSubprocess());
 
         // Step 5: Clean - Clean up temporary resources (005-dolphindb-loader)
         subprocesses.add(new CleanSubprocess());
