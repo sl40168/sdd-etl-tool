@@ -1,5 +1,6 @@
 package com.sdd.etl.source.extract.db.quote;
 
+import cn.hutool.core.date.LocalDateTimeUtil;
 import com.sdd.etl.model.SourceDataModel;
 import com.sdd.etl.source.extract.db.DatabaseExtractor;
 import org.slf4j.Logger;
@@ -8,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 /**
  * Concrete extractor for Bond Future Quote data from MySQL.
@@ -21,8 +21,8 @@ public class BondFutureQuoteExtractor extends DatabaseExtractor {
 
     private static final Logger logger = LoggerFactory.getLogger(BondFutureQuoteExtractor.class);
     // Spec format: "yyyyMMdd HHmmss.SSS" e.g. "20231201 093000.500"
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd HHmmss.SSS");
-    private static final DateTimeFormatter SHORT_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS");
+    private static final String TIME_FORMATTER = "yyyyMMdd HHmmss.SSS";
+    private static final String SHORT_TIME_FORMATTER = "yyyyMMddHHmmssSSS";
 
     @Override
     public String getCategory() {
@@ -91,7 +91,7 @@ public class BondFutureQuoteExtractor extends DatabaseExtractor {
         if (receiveTimeStr != null && !receiveTimeStr.trim().isEmpty()) {
             try {
                 // Spec says "yyyyMMdd HHmmss.SSS"
-                model.setReceiveTime(LocalDateTime.parse(receiveTimeStr, TIME_FORMATTER));
+                model.setReceiveTime(LocalDateTimeUtil.parse(receiveTimeStr, TIME_FORMATTER));
             } catch (Exception e) {
                 // Fallback to eventTime if parsing fails
                 logger.warn("Failed to parse receive_time '{}', falling back to event_time.", receiveTimeStr);
@@ -181,11 +181,11 @@ public class BondFutureQuoteExtractor extends DatabaseExtractor {
 
         String dtStr = dStr + tStr;
         try {
-            return LocalDateTime.parse(dtStr, SHORT_TIME_FORMATTER);
+            return LocalDateTimeUtil.parse(dtStr, SHORT_TIME_FORMATTER);
             // format: yyyyMMddHHmmssSSS -> 8 + 9 = 17 chars
         } catch (Exception e) {
             logger.error("Failed to parse date_time string: '{}', date='{}', time='{}', dtStr='{}', length={}, pattern='{}', error={}",
-                       dtStr, date, time, dtStr, dtStr.length(), SHORT_TIME_FORMATTER.toString(), e.getMessage(), e);
+                       dtStr, date, time, dtStr, dtStr.length(), SHORT_TIME_FORMATTER, e.getMessage(), e);
             return null;
         }
     }

@@ -12,7 +12,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import cn.hutool.core.date.LocalDateTimeUtil;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,10 +32,9 @@ import java.util.List;
  * </ul>
  */
 public class CsvParser {
-    
+
     /** Date format for timestamp fields in CSV */
-    private static final DateTimeFormatter TIME_FORMATTER = 
-            DateTimeFormatter.ofPattern("yyyyMMdd-HH:mm:ss.SSS");
+    private static final String TIME_FORMATTER = "yyyyMMdd-HH:mm:ss.SSS";
     
     /** CSV header field names (16 columns from Plan.md) */
     private static final String FIELD_ID = "id";
@@ -308,7 +307,7 @@ public class CsvParser {
             return null;
         }
         try {
-            return LocalDateTime.parse(value.trim(), TIME_FORMATTER);
+            return LocalDateTimeUtil.parse(value.trim(), TIME_FORMATTER);
         } catch (Exception e) {
             return null;
         }

@@ -12,7 +12,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import cn.hutool.core.date.LocalDateTimeUtil;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,10 +37,10 @@ import java.util.List;
 public class TradeCsvParser {
 
     /** Date format for timestamp fields in CSV */
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    private static final String TIME_FORMATTER = "yyyy-MM-dd HH:mm:ss.SSS";
 
     /** Date format for act_dt field in CSV */
-    private static final DateTimeFormatter ACT_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final String ACT_DATE_FORMATTER = "yyyyMMdd";
 
     /** CSV header field names - trade specific (from Plan.md I.4 format) */
     private static final String FIELD_ID = "id";
@@ -314,7 +314,7 @@ public class TradeCsvParser {
             return null;
         }
         try {
-            return LocalDateTime.parse(value.trim(), TIME_FORMATTER);
+            return LocalDateTimeUtil.parse(value.trim(), TIME_FORMATTER);
         } catch (Exception e) {
             return null;
         }

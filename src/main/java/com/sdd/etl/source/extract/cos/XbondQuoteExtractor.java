@@ -14,7 +14,7 @@ import com.sdd.etl.source.extract.cos.client.CosClientImpl;
 
 import java.io.File;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import cn.hutool.core.date.LocalDateTimeUtil;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -172,8 +172,7 @@ public class XbondQuoteExtractor extends CosExtractor<RawQuoteRecord> {
             if (currentBusinessDate != null) {
                 model.setBusinessDate(currentBusinessDate);
             } else if (firstRecord.getTransactTime() != null) {
-                String businessDate = firstRecord.getTransactTime()
-                        .format(DateTimeFormatter.ofPattern("yyyy.MM.dd"));
+                String businessDate = LocalDateTimeUtil.format(firstRecord.getTransactTime(), "yyyy.MM.dd");
                 model.setBusinessDate(businessDate);
             }
             
