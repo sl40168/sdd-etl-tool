@@ -1,12 +1,15 @@
 package com.sdd.etl.context;
 
+import com.sdd.etl.model.SourceDataModel;
 import org.junit.Test;
 import org.junit.Before;
 
 import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.model.SubprocessResult;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.time.LocalDate;
 import com.sdd.etl.util.DateUtils;
@@ -84,7 +87,7 @@ public class ETLContextTest {
 
     @Test
     public void testSetExtractedData_SetsValue() {
-        Object data = "test data";
+        List<SourceDataModel> data = new ArrayList<>();
         context.setExtractedData(data);
 
         assertEquals("Extracted data should be set", data, context.getExtractedData());

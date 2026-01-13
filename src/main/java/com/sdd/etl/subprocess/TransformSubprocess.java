@@ -1,5 +1,6 @@
 package com.sdd.etl.subprocess;
 
+import cn.hutool.core.collection.CollUtil;
 import com.sdd.etl.ETLException;
 import com.sdd.etl.context.ETLContext;
 import com.sdd.etl.context.SubprocessType;
@@ -11,15 +12,13 @@ import com.sdd.etl.model.TargetDataModel;
 import com.sdd.etl.util.DateUtils;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 /**
  * Subprocess for transforming source data models into target data models.
@@ -109,7 +108,7 @@ public class TransformSubprocess implements SubprocessInterface {
     @Override
     public int execute(ETLContext context) throws ETLException {
         // Get extracted data from context
-        Object extractedData = context.getExtractedData();
+        List<SourceDataModel> extractedData = context.getExtractedData();
         if (extractedData == null) {
             throw new TransformationException(
                 "TransformSubprocess",
@@ -119,7 +118,7 @@ public class TransformSubprocess implements SubprocessInterface {
         }
 
         // Extract data by type
-        Map<String, List<SourceDataModel>> dataByType = extractDataByType(extractedData);
+        Map<Class<? extends SourceDataModel>, List<SourceDataModel>> dataByType = extractDataByType(extractedData);
 
         // Count non-empty data types
         int nonEmptyTypes = countNonEmptyTypes(dataByType);
@@ -153,7 +152,7 @@ public class TransformSubprocess implements SubprocessInterface {
             }
 
             // Collect results
-            Map<String, List<? extends TargetDataModel>> allTransformedData = new HashMap<>();
+            Map<Class<? extends SourceDataModel>, List<? extends TargetDataModel>> allTransformedData = new HashMap<>();
             int totalTransformed = 0;
 
             for (Future<TransformResult> future : futures) {
@@ -207,31 +206,12 @@ public class TransformSubprocess implements SubprocessInterface {
      * @throws TransformationException if data extraction fails
      */
     @SuppressWarnings("unchecked")
-    private Map<String, List<SourceDataModel>> extractDataByType(Object extractedData) throws TransformationException {
-        Map<String, List<SourceDataModel>> dataByType = new HashMap<>();
-
-        // If extracted data is a map, use it directly
-        if (extractedData instanceof Map) {
-            Map<?, ?> extractedMap = (Map<?, ?>) extractedData;
-            for (Map.Entry<?, ?> entry : extractedMap.entrySet()) {
-                if (entry.getKey() instanceof String && entry.getValue() instanceof List) {
-                    String dataType = (String) entry.getKey();
-                    List<?> list = (List<?>) entry.getValue();
-                    List<SourceDataModel> sourceData = (List<SourceDataModel>) list;
-                    dataByType.put(dataType, sourceData);
-                }
-            }
+    private Map<Class<? extends SourceDataModel>, List<SourceDataModel>> extractDataByType(List<SourceDataModel> extractedData) throws TransformationException {
+        if (CollUtil.isNotEmpty(extractedData)) {
+            return extractedData.stream().collect(Collectors.groupingBy(SourceDataModel::getClass));
         } else {
-            // If not a map, try to determine type from object
-            // This is a fallback - actual implementation should extract from context
-            throw new TransformationException(
-                "TransformSubprocess",
-                0,
-                "Unexpected extracted data type: " + extractedData.getClass().getName()
-            );
+            return Collections.EMPTY_MAP;
         }
-
-        return dataByType;
     }
 
     /**
@@ -240,7 +220,7 @@ public class TransformSubprocess implements SubprocessInterface {
      * @param dataByType map of data type to list of source data models
      * @return count of data types with non-empty lists
      */
-    private int countNonEmptyTypes(Map<String, List<SourceDataModel>> dataByType) {
+    private int countNonEmptyTypes(Map<Class<? extends SourceDataModel>, List<SourceDataModel>> dataByType) {
         int count = 0;
         for (List<SourceDataModel> data : dataByType.values()) {
             if (data != null && !data.isEmpty()) {
@@ -257,12 +237,12 @@ public class TransformSubprocess implements SubprocessInterface {
      * @return list of transformation tasks
      */
     private List<Callable<TransformResult>> createTransformationTasks(
-            Map<String, List<SourceDataModel>> dataByType) {
+            Map<Class<? extends SourceDataModel>, List<SourceDataModel>> dataByType) {
 
         List<Callable<TransformResult>> tasks = new ArrayList<>();
 
-        for (Map.Entry<String, List<SourceDataModel>> entry : dataByType.entrySet()) {
-            String dataType = entry.getKey();
+        for (Map.Entry<Class<? extends SourceDataModel>, List<SourceDataModel>> entry : dataByType.entrySet()) {
+            Class<? extends SourceDataModel> dataType = entry.getKey();
             List<SourceDataModel> sourceData = entry.getValue();
 
             if (sourceData == null || sourceData.isEmpty()) {
@@ -280,7 +260,7 @@ public class TransformSubprocess implements SubprocessInterface {
      */
     private class TransformationTask implements Callable<TransformResult> {
 
-        private final String dataType;
+        private final Class<? extends SourceDataModel> dataType;
         private final List<SourceDataModel> sourceData;
 
         /**
@@ -289,7 +269,7 @@ public class TransformSubprocess implements SubprocessInterface {
          * @param dataType data type name
          * @param sourceData source data to transform
          */
-        TransformationTask(String dataType, List<SourceDataModel> sourceData) {
+        TransformationTask(Class<? extends SourceDataModel> dataType, List<SourceDataModel> sourceData) {
             this.dataType = dataType;
             this.sourceData = sourceData;
         }
@@ -302,7 +282,7 @@ public class TransformSubprocess implements SubprocessInterface {
         @Override
         public TransformResult call() {
             try {
-                Class<?> sourceClass = dataTypeClassMap.get(dataType);
+                Class<?> sourceClass = dataType;
                 if (sourceClass == null) {
                     throw new TransformationException(
                         "TransformationTask",
@@ -344,7 +324,7 @@ public class TransformSubprocess implements SubprocessInterface {
      */
     private static class TransformResult {
 
-        private final String dataType;
+        private final Class<? extends SourceDataModel> dataType;
         private final List<? extends TargetDataModel> transformedData;
         private final int recordCount;
         private final String error;
@@ -358,7 +338,7 @@ public class TransformSubprocess implements SubprocessInterface {
          * @param transformedData the transformed data
          * @param recordCount the number of records transformed
          */
-        TransformResult(String dataType,
+        TransformResult(Class<? extends SourceDataModel> dataType,
                         List<? extends TargetDataModel> transformedData,
                         int recordCount) {
             this(dataType, transformedData, recordCount, null, true);
@@ -373,7 +353,7 @@ public class TransformSubprocess implements SubprocessInterface {
          * @param error the error message (if failed)
          * @param success whether transformation was successful
          */
-        TransformResult(String dataType,
+        TransformResult(Class<? extends SourceDataModel> dataType,
                         List<? extends TargetDataModel> transformedData,
                         int recordCount,
                         String error,
@@ -391,7 +371,7 @@ public class TransformSubprocess implements SubprocessInterface {
          * @param success whether transformation was successful
          * @param exception the exception (if failed)
          */
-        TransformResult(String dataType,
+        TransformResult(Class<? extends SourceDataModel> dataType,
                         List<? extends TargetDataModel> transformedData,
                         int recordCount,
                         String error,
@@ -410,7 +390,7 @@ public class TransformSubprocess implements SubprocessInterface {
          *
          * @return data type name
          */
-        String getDataType() {
+        Class<? extends SourceDataModel> getDataType() {
             return dataType;
         }
 

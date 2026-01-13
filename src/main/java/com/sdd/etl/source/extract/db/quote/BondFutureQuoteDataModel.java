@@ -21,32 +21,32 @@ public class BondFutureQuoteDataModel extends SourceDataModel {
     private String productType;
     private String exchange;
     private String source;
-    private Integer settleSpeed;
+    private int settleSpeed;
     private String level;
     private String status;
 
     // --- Price Fields ---
-    private Double lastTradePrice;
-    private Double openPrice;
-    private Double highPrice;
-    private Double lowPrice;
-    private Double closePrice;
-    private Double settlePrice;
+    private double lastTradePrice;
+    private double openPrice;
+    private double highPrice;
+    private double lowPrice;
+    private double closePrice;
+    private double settlePrice;
 
     // --- Limit Fields ---
-    private Double upperLimit;
-    private Double lowerLimit;
+    private double upperLimit;
+    private double lowerLimit;
 
     // --- Volume Fields ---
-    private Long totalVolume;
-    private Double totalTurnover;
-    private Long openInterest;
+    private double totalVolume;
+    private double totalTurnover;
+    private double openInterest;
 
     // --- Level 1 Market Depth ---
-    private Double bid1Price;
-    private Long bid1Volume;
-    private Double offer1Price;
-    private Long offer1Volume;
+    private double bid1Price;
+    private double bid1Volume;
+    private double offer1Price;
+    private double offer1Volume;
 
     // --- Timestamps ---
     private LocalDateTime eventTime;
@@ -180,11 +180,11 @@ public class BondFutureQuoteDataModel extends SourceDataModel {
         this.source = source;
     }
 
-    public Integer getSettleSpeed() {
+    public int getSettleSpeed() {
         return settleSpeed;
     }
 
-    public void setSettleSpeed(Integer settleSpeed) {
+    public void setSettleSpeed(int settleSpeed) {
         this.settleSpeed = settleSpeed;
     }
 
@@ -204,123 +204,123 @@ public class BondFutureQuoteDataModel extends SourceDataModel {
         this.status = status;
     }
 
-    public Double getLastTradePrice() {
+    public double getLastTradePrice() {
         return lastTradePrice;
     }
 
-    public void setLastTradePrice(Double lastTradePrice) {
+    public void setLastTradePrice(double lastTradePrice) {
         this.lastTradePrice = lastTradePrice;
     }
 
-    public Double getOpenPrice() {
+    public double getOpenPrice() {
         return openPrice;
     }
 
-    public void setOpenPrice(Double openPrice) {
+    public void setOpenPrice(double openPrice) {
         this.openPrice = openPrice;
     }
 
-    public Double getHighPrice() {
+    public double getHighPrice() {
         return highPrice;
     }
 
-    public void setHighPrice(Double highPrice) {
+    public void setHighPrice(double highPrice) {
         this.highPrice = highPrice;
     }
 
-    public Double getLowPrice() {
+    public double getLowPrice() {
         return lowPrice;
     }
 
-    public void setLowPrice(Double lowPrice) {
+    public void setLowPrice(double lowPrice) {
         this.lowPrice = lowPrice;
     }
 
-    public Double getClosePrice() {
+    public double getClosePrice() {
         return closePrice;
     }
 
-    public void setClosePrice(Double closePrice) {
+    public void setClosePrice(double closePrice) {
         this.closePrice = closePrice;
     }
 
-    public Double getSettlePrice() {
+    public double getSettlePrice() {
         return settlePrice;
     }
 
-    public void setSettlePrice(Double settlePrice) {
+    public void setSettlePrice(double settlePrice) {
         this.settlePrice = settlePrice;
     }
 
-    public Double getUpperLimit() {
+    public double getUpperLimit() {
         return upperLimit;
     }
 
-    public void setUpperLimit(Double upperLimit) {
+    public void setUpperLimit(double upperLimit) {
         this.upperLimit = upperLimit;
     }
 
-    public Double getLowerLimit() {
+    public double getLowerLimit() {
         return lowerLimit;
     }
 
-    public void setLowerLimit(Double lowerLimit) {
+    public void setLowerLimit(double lowerLimit) {
         this.lowerLimit = lowerLimit;
     }
 
-    public Long getTotalVolume() {
+    public double getTotalVolume() {
         return totalVolume;
     }
 
-    public void setTotalVolume(Long totalVolume) {
+    public void setTotalVolume(double totalVolume) {
         this.totalVolume = totalVolume;
     }
 
-    public Double getTotalTurnover() {
+    public double getTotalTurnover() {
         return totalTurnover;
     }
 
-    public void setTotalTurnover(Double totalTurnover) {
+    public void setTotalTurnover(double totalTurnover) {
         this.totalTurnover = totalTurnover;
     }
 
-    public Long getOpenInterest() {
+    public double getOpenInterest() {
         return openInterest;
     }
 
-    public void setOpenInterest(Long openInterest) {
+    public void setOpenInterest(double openInterest) {
         this.openInterest = openInterest;
     }
 
-    public Double getBid1Price() {
+    public double getBid1Price() {
         return bid1Price;
     }
 
-    public void setBid1Price(Double bid1Price) {
+    public void setBid1Price(double bid1Price) {
         this.bid1Price = bid1Price;
     }
 
-    public Long getBid1Volume() {
+    public double getBid1Volume() {
         return bid1Volume;
     }
 
-    public void setBid1Volume(Long bid1Volume) {
+    public void setBid1Volume(double bid1Volume) {
         this.bid1Volume = bid1Volume;
     }
 
-    public Double getOffer1Price() {
+    public double getOffer1Price() {
         return offer1Price;
     }
 
-    public void setOffer1Price(Double offer1Price) {
+    public void setOffer1Price(double offer1Price) {
         this.offer1Price = offer1Price;
     }
 
-    public Long getOffer1Volume() {
+    public double getOffer1Volume() {
         return offer1Volume;
     }
 
-    public void setOffer1Volume(Long offer1Volume) {
+    public void setOffer1Volume(double offer1Volume) {
         this.offer1Volume = offer1Volume;
     }
 

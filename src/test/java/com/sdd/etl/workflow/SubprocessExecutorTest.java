@@ -14,6 +14,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -93,7 +94,7 @@ public class SubprocessExecutorTest {
         // Set up execute behaviors to update context
         when(mockExtract.execute(spyContext)).thenAnswer(invocation -> {
             spyContext.setExtractedDataCount(100);
-            spyContext.setExtractedData(new Object());
+            spyContext.setExtractedData(Collections.emptyList());
             return 100;
         });
         
@@ -156,7 +157,7 @@ public class SubprocessExecutorTest {
         when(mockContext.getCurrentDate()).thenReturn(DateUtils.parseDate("20250101"));
         // Mock context state after extract
         when(mockContext.getExtractedDataCount()).thenReturn(100);
-        when(mockContext.getExtractedData()).thenReturn(new Object());
+        when(mockContext.getExtractedData()).thenReturn(Collections.emptyList());
         
         // When
         subprocessExecutor.executeAll(subprocesses, mockContext);

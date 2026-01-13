@@ -2,9 +2,14 @@ package com.sdd.etl.context;
 
 import com.sdd.etl.ETLException;
 import com.sdd.etl.config.ETConfiguration;
+import com.sdd.etl.model.SourceDataModel;
 import com.sdd.etl.subprocess.SubprocessInterface;
 import com.sdd.etl.util.DateUtils;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import org.junit.Test;
 import org.junit.Before;
 import static org.junit.Assert.*;
@@ -43,7 +48,7 @@ public class ContextDataFlowIntegrationTest {
             public int execute(ETLContext ctx) throws ETLException {
                 // Simulate extraction of 100 records
                 ctx.setExtractedDataCount(100);
-                ctx.setExtractedData(new Object());
+                ctx.setExtractedData(Collections.emptyList());
                 return 100;
             }
 
@@ -77,7 +82,7 @@ public class ContextDataFlowIntegrationTest {
     public void testTransformReadsFromAndWritesToContext() throws ETLException {
         // Given
         // First, setup extract data in context
-        Object extractedData = new Object();
+        List<SourceDataModel> extractedData = new ArrayList<>();
         context.setExtractedDataCount(100);
         context.setExtractedData(extractedData);
         context.setCurrentSubprocess(SubprocessType.TRANSFORM);

@@ -220,7 +220,7 @@ public class XbondQuoteDataModelSampleTest {
         assertEquals("product_type should be BOND", "BOND", model.getProductType());
         assertEquals("exchange should be CFETS", "CFETS", model.getExchange());
         assertEquals("source should be XBOND", "XBOND", model.getSource());
-        assertEquals("settle_speed should be 1 (from 2)", Integer.valueOf(1), model.getSettleSpeed());
+        assertEquals("settle_speed should be 1 (from 2)", 1, model.getSettleSpeed());
         assertEquals("level should be L2", "L2", model.getLevel());
         assertEquals("status should be Normal", "Normal", model.getStatus());
         
@@ -232,26 +232,26 @@ public class XbondQuoteDataModelSampleTest {
         
         // Level 0 (best quotes, not tradable) - from price_level=1
         // NOTE: According to Plan.md, price_level=1 maps to level 0 in output
-        assertEquals("bid_0_price should match record 1/3", Double.valueOf(107.9197), model.getBid0Price());
-        assertEquals("bid_0_yield should match record 1/3", Double.valueOf(1.858), model.getBid0Yield());
+        assertEquals("bid_0_price should match record 1/3", 107.9197, model.getBid0Price(), 0.00001);
+        assertEquals("bid_0_yield should match record 1/3", 1.858, model.getBid0Yield(), 0.00001);
         assertEquals("bid_0_yield_type should match record 1/3", "MATURITY", model.getBid0YieldType());
-        assertEquals("bid_0_volume should match record 1/3", Long.valueOf(10000000L), model.getBid0Volume());
+        assertEquals("bid_0_volume should match record 1/3", 10000000L, model.getBid0Volume(), 0.1);
         
-        assertEquals("offer_0_price should match record 2/4", Double.valueOf(108.1531), model.getOffer0Price());
-        assertEquals("offer_0_yield should match record 2/4", Double.valueOf(1.8145), model.getOffer0Yield());
+        assertEquals("offer_0_price should match record 2/4", 108.1531, model.getOffer0Price(), 0.00001);
+        assertEquals("offer_0_yield should match record 2/4", 1.8145, model.getOffer0Yield(), 0.00001);
         assertEquals("offer_0_yield_type should match record 2/4", "MATURITY", model.getOffer0YieldType());
-        assertEquals("offer_0_volume should match record 2/4", Long.valueOf(10000000L), model.getOffer0Volume());
+        assertEquals("offer_0_volume should match record 2/4", 10000000L, model.getOffer0Volume(), 0.1);
         
         // Level 1 (tradable) - from price_level=2
-        assertEquals("bid_1_price should match record 3", Double.valueOf(107.9197), model.getBid1Price());
-        assertEquals("bid_1_yield should match record 3", Double.valueOf(1.858), model.getBid1Yield());
+        assertEquals("bid_1_price should match record 3", 107.9197, model.getBid1Price(), 0.00001);
+        assertEquals("bid_1_yield should match record 3", 1.858, model.getBid1Yield(), 0.00001);
         assertEquals("bid_1_yield_type should match record 3", "MATURITY", model.getBid1YieldType());
-        assertEquals("bid_1_tradable_volume should match record 3", Long.valueOf(10000000L), model.getBid1TradableVolume());
+        assertEquals("bid_1_tradable_volume should match record 3", 10000000L, model.getBid1TradableVolume(), 0.1);
         
-        assertEquals("offer_1_price should match record 4", Double.valueOf(108.1531), model.getOffer1Price());
-        assertEquals("offer_1_yield should match record 4", Double.valueOf(1.8145), model.getOffer1Yield());
+        assertEquals("offer_1_price should match record 4", 108.1531, model.getOffer1Price(), 0.00001);
+        assertEquals("offer_1_yield should match record 4", 1.8145, model.getOffer1Yield(), 0.00001);
         assertEquals("offer_1_yield_type should match record 4", "MATURITY", model.getOffer1YieldType());
-        assertEquals("offer_1_tradable_volume should match record 4", Long.valueOf(10000000L), model.getOffer1TradableVolume());
+        assertEquals("offer_1_tradable_volume should match record 4", 10000000L, model.getOffer1TradableVolume(), 0.1);
         
         // Levels 2-5 should be null/NaN (not present in sample data)
         assertTrue("bid_2_price should be NaN", Double.isNaN(model.getBid2Price()));
@@ -289,7 +289,7 @@ public class XbondQuoteDataModelSampleTest {
 
         // Then: settle_speed should be 1 (after mapping 2->1)
         assertEquals("settle_speed should be 1 (source=2 maps to 1 via 2-1=1)", 
-                     Integer.valueOf(1), model.getSettleSpeed());
+                     1, model.getSettleSpeed());
     }
     
     // --- Helper methods ---

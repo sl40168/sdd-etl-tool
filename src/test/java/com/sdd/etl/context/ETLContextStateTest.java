@@ -1,9 +1,15 @@
 package com.sdd.etl.context;
 
 import com.sdd.etl.config.ETConfiguration;
+import com.sdd.etl.model.SourceDataModel;
 import org.junit.Test;
 import org.junit.Before;
 import com.sdd.etl.util.DateUtils;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import static org.junit.Assert.*;
 
 /**
@@ -33,7 +39,7 @@ public class ETLContextStateTest {
         // When
         context.setCurrentSubprocess(SubprocessType.EXTRACT);
         context.setExtractedDataCount(100);
-        context.setExtractedData(new Object());
+        context.setExtractedData(Collections.emptyList());
 
         // Then
         assertEquals("Current subprocess should be EXTRACT", SubprocessType.EXTRACT, context.getCurrentSubprocess());
@@ -49,7 +55,7 @@ public class ETLContextStateTest {
     @Test
     public void testStateTransition_ExtractToTransform() {
         // Given
-        Object extractedData = new Object();
+        List<SourceDataModel> extractedData = new ArrayList<>();
         context.setCurrentSubprocess(SubprocessType.EXTRACT);
         context.setExtractedDataCount(100);
         context.setExtractedData(extractedData);
@@ -142,7 +148,7 @@ public class ETLContextStateTest {
         // Given
         context.setCurrentSubprocess(SubprocessType.EXTRACT);
         context.setExtractedDataCount(100);
-        context.setExtractedData(new Object());
+        context.setExtractedData(Collections.emptyList());
         context.setTransformedDataCount(95);
         context.setTransformedData(new Object());
         context.setLoadedDataCount(95);
@@ -171,7 +177,7 @@ public class ETLContextStateTest {
     @Test
     public void testStateTransitions_MaintainDataIntegrity() {
         // Simulate complete ETL workflow state transitions
-        Object extractedData = new Object();
+        List<SourceDataModel> extractedData = new ArrayList<>();
         Object transformedData = new Object();
 
         // EXTRACT phase

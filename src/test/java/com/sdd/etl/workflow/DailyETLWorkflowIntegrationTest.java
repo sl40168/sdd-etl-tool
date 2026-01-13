@@ -15,10 +15,7 @@ import org.junit.After;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Integration tests for DailyETLWorkflow with complete subprocess sequence.
@@ -63,7 +60,7 @@ public class DailyETLWorkflowIntegrationTest {
                     public int execute(ETLContext context) throws ETLException {
                         // Simulate extraction of 100 records
                         context.setExtractedDataCount(100);
-                        context.setExtractedData(new Object());
+                        context.setExtractedData(Collections.emptyList());
                         return 100;
                     }
                     
@@ -349,7 +346,7 @@ public class DailyETLWorkflowIntegrationTest {
                     @Override
                     public int execute(ETLContext context) throws ETLException {
                         context.setExtractedDataCount(100);
-                        context.setExtractedData(new Object());
+                        context.setExtractedData(Collections.emptyList());
                         return 100;
                     }
                     

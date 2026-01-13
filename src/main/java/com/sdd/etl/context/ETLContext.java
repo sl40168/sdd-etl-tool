@@ -1,6 +1,7 @@
 package com.sdd.etl.context;
 
 import com.sdd.etl.config.ETConfiguration;
+import com.sdd.etl.model.SourceDataModel;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -101,8 +102,8 @@ public class ETLContext {
      *
      * @return extracted data, or null if not set
      */
-    public Object getExtractedData() {
-        return data.get(ContextConstants.EXTRACTED_DATA);
+    public List<SourceDataModel> getExtractedData() {
+        return (List<SourceDataModel>) data.get(ContextConstants.EXTRACTED_DATA);
     }
 
     /**
@@ -110,7 +111,7 @@ public class ETLContext {
      *
      * @param extractedData extracted data objects
      */
-    public void setExtractedData(Object extractedData) {
+    public void setExtractedData(List<? extends SourceDataModel> extractedData) {
         data.put(ContextConstants.EXTRACTED_DATA, extractedData);
     }
 

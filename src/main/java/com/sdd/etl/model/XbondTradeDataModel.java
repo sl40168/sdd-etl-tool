@@ -20,7 +20,7 @@ public class XbondTradeDataModel extends SourceDataModel {
     private String productType;
     private String exchange;
     private String source;
-    private Integer settleSpeed;
+    private int settleSpeed;
     private String level;
     private String status;
 
@@ -29,10 +29,10 @@ public class XbondTradeDataModel extends SourceDataModel {
     private LocalDateTime receiveTime;
 
     // --- Trade-Specific Fields ---
-    private Double tradePrice;
-    private Double tradeYield;
+    private double tradePrice;
+    private double tradeYield;
     private String tradeYieldType;
-    private Long tradeVolume;
+    private double tradeVolume;
     private String tradeSide;
     private String tradeId;
 
@@ -84,7 +84,7 @@ public class XbondTradeDataModel extends SourceDataModel {
             return false;
         }
 
-        if (settleSpeed == null || (settleSpeed != 0 && settleSpeed != 1)) {
+        if (settleSpeed != 0 && settleSpeed != 1) {
             return false;
         }
 
@@ -98,9 +98,9 @@ public class XbondTradeDataModel extends SourceDataModel {
 
         // Validate at least one trade field is populated (non-null and not NaN for
         // Double fields)
-        boolean hasTradePrice = tradePrice != null && !Double.isNaN(tradePrice);
-        boolean hasTradeYield = tradeYield != null && !Double.isNaN(tradeYield);
-        boolean hasTradeVolume = tradeVolume != null;
+        boolean hasTradePrice = !Double.isNaN(tradePrice);
+        boolean hasTradeYield = !Double.isNaN(tradeYield);
+        boolean hasTradeVolume = !Double.isNaN(tradeVolume);
 
         if (!hasTradePrice && !hasTradeYield && !hasTradeVolume) {
             return false;
@@ -195,11 +195,11 @@ public class XbondTradeDataModel extends SourceDataModel {
         this.source = source;
     }
 
-    public Integer getSettleSpeed() {
+    public int getSettleSpeed() {
         return settleSpeed;
     }
 
-    public void setSettleSpeed(Integer settleSpeed) {
+    public void setSettleSpeed(int settleSpeed) {
         this.settleSpeed = settleSpeed;
     }
 
@@ -237,19 +237,19 @@ public class XbondTradeDataModel extends SourceDataModel {
     }
 
     // Trade-Specific Fields
-    public Double getTradePrice() {
+    public double getTradePrice() {
         return tradePrice;
     }
 
-    public void setTradePrice(Double tradePrice) {
+    public void setTradePrice(double tradePrice) {
         this.tradePrice = tradePrice;
     }
 
-    public Double getTradeYield() {
+    public double getTradeYield() {
         return tradeYield;
     }
 
-    public void setTradeYield(Double tradeYield) {
+    public void setTradeYield(double tradeYield) {
         this.tradeYield = tradeYield;
     }
 
@@ -261,11 +261,11 @@ public class XbondTradeDataModel extends SourceDataModel {
         this.tradeYieldType = tradeYieldType;
     }
 
-    public Long getTradeVolume() {
+    public double getTradeVolume() {
         return tradeVolume;
     }
 
-    public void setTradeVolume(Long tradeVolume) {
+    public void setTradeVolume(double tradeVolume) {
         this.tradeVolume = tradeVolume;
     }
 
@@ -286,37 +286,6 @@ public class XbondTradeDataModel extends SourceDataModel {
     }
 
     // --- Utility Methods ---
-
-    /**
-     * Gets the total trade value (price × volume).
-     * 
-     * @return total value as Double, or NaN if price or volume is missing/invalid
-     */
-    public Double getTotalValue() {
-        if (tradeVolume != null) {
-            if (tradeVolume == 0) {
-                return 0.0;
-            }
-            if (tradePrice != null && !Double.isNaN(tradePrice) && tradeVolume > 0) {
-                return tradePrice * tradeVolume;
-            }
-        }
-        return Double.NaN;
-    }
-
-    /**
-     * Gets a summary of trade fields for debugging.
-     * 
-     * @return map of field summaries
-     */
-    public Map<String, String> getTradeSummary() {
-        Map<String, String> summary = new HashMap<>();
-        summary.put("tradeId", tradeId != null ? tradeId : "null");
-        summary.put("price", tradePrice != null ? String.valueOf(tradePrice) : "NaN");
-        summary.put("volume", tradeVolume != null ? String.valueOf(tradeVolume) : "null");
-        summary.put("tradeSide", tradeSide != null ? tradeSide : "null");
-        return summary;
-    }
 
     @Override
     public String toString() {

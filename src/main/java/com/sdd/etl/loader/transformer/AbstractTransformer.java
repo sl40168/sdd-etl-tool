@@ -233,6 +233,18 @@ public abstract class AbstractTransformer<S extends SourceDataModel, T extends T
         // Same type - direct assignment
         if (targetType.isAssignableFrom(sourceType)) {
             return sourceValue;
+        } else if (targetType == int.class && sourceType.equals(Integer.class)) {
+            return sourceValue;
+        } else if (targetType == long.class && sourceType.equals(Long.class)) {
+            return sourceValue;
+        } else if (targetType == double.class && sourceType.equals(Double.class)) {
+            return sourceValue;
+        } else if (targetType == float.class && sourceType.equals(Float.class)) {
+            return sourceValue;
+        } else if (targetType == boolean.class && sourceType.equals(Boolean.class)) {
+            return sourceValue;
+        } else if (targetType == byte.class && sourceType.equals(Byte.class)) {
+            return sourceValue;
         }
 
         // String to LocalDate (format: YYYY.MM.DD → YYYYMMDD)

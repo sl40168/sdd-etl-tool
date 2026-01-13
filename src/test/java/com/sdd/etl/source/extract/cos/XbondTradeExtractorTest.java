@@ -185,11 +185,11 @@ public class XbondTradeExtractorTest {
 
         XbondTradeDataModel model = (XbondTradeDataModel) result.get(0);
         assertEquals("exchProductId should have .IB suffix", "1021001.IB", model.getExchProductId());
-        assertEquals("settleSpeed should match settlement type", Integer.valueOf(1), model.getSettleSpeed());
-        assertEquals("tradePrice should match", Double.valueOf(100.5), model.getTradePrice());
-        assertEquals("tradeYield should match", Double.valueOf(2.5), model.getTradeYield());
+        assertEquals("settleSpeed should match settlement type", 1, model.getSettleSpeed());
+        assertEquals("tradePrice should match", 100.5, model.getTradePrice(), 0.00001);
+        assertEquals("tradeYield should match", 2.5, model.getTradeYield(), 0.00001);
         assertEquals("tradeYieldType should match", "YTM", model.getTradeYieldType());
-        assertEquals("tradeVolume should match", Long.valueOf(1000), model.getTradeVolume());
+        assertEquals("tradeVolume should match", 1000, model.getTradeVolume(), 0.1);
         assertEquals("trade side should match", "C001", model.getTradeSide());
         assertEquals("tradeId should match", "12345", model.getTradeId());
         assertEquals("eventTime should match dealTime", LocalDateTime.of(2025, 1, 1, 10, 30, 0),
@@ -245,14 +245,14 @@ public class XbondTradeExtractorTest {
         // First model
         XbondTradeDataModel model1 = (XbondTradeDataModel) result.get(0);
         assertEquals("First model exchProductId", "1021001.IB", model1.getExchProductId());
-        assertEquals("First model tradePrice", Double.valueOf(100.5), model1.getTradePrice());
+        assertEquals("First model tradePrice", 100.5, model1.getTradePrice(), 0.00001);
         assertEquals("First model tradeSide should be mapped", "TKN", model1.getTradeSide());
         assertEquals("First model tradeId", "1", model1.getTradeId());
 
         // Second model
         XbondTradeDataModel model2 = (XbondTradeDataModel) result.get(1);
         assertEquals("Second model exchProductId", "1021001.IB", model2.getExchProductId());
-        assertEquals("Second model tradePrice", Double.valueOf(100.6), model2.getTradePrice());
+        assertEquals("Second model tradePrice", 100.6, model2.getTradePrice(), 0.00001);
         assertEquals("Second model tradeSide should be mapped", "GVN", model2.getTradeSide());
         assertEquals("Second model tradeId", "2", model2.getTradeId());
 
@@ -303,15 +303,15 @@ public class XbondTradeExtractorTest {
         // First model
         XbondTradeDataModel model1 = (XbondTradeDataModel) result.get(0);
         assertEquals("First model exchProductId", "1021001.IB", model1.getExchProductId());
-        assertEquals("First model settleSpeed", Integer.valueOf(1), model1.getSettleSpeed());
-        assertEquals("First model tradePrice", Double.valueOf(100.5), model1.getTradePrice());
+        assertEquals("First model settleSpeed", 1, model1.getSettleSpeed());
+        assertEquals("First model tradePrice", 100.5, model1.getTradePrice(), 0.00001);
         assertEquals("First model tradeId", "1", model1.getTradeId());
 
         // Second model
         XbondTradeDataModel model2 = (XbondTradeDataModel) result.get(1);
         assertEquals("Second model exchProductId", "1021002.IB", model2.getExchProductId());
-        assertEquals("Second model settleSpeed", Integer.valueOf(0), model2.getSettleSpeed());
-        assertEquals("Second model tradePrice", Double.valueOf(101.0), model2.getTradePrice());
+        assertEquals("Second model settleSpeed", 0, model2.getSettleSpeed());
+        assertEquals("Second model tradePrice", 101.0, model2.getTradePrice(), 0.00001);
         assertEquals("Second model tradeId", "2", model2.getTradeId());
 
         // Both should be valid
