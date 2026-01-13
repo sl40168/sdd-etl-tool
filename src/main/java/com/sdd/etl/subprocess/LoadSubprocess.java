@@ -1,15 +1,14 @@
 package com.sdd.etl.subprocess;
 
 import com.sdd.etl.ETLException;
+import com.sdd.etl.config.ETConfiguration;
 import com.sdd.etl.context.ETLContext;
 import com.sdd.etl.context.SubprocessType;
-import com.sdd.etl.util.DateUtils;
 import com.sdd.etl.loader.config.LoaderConfiguration;
-import com.sdd.etl.loader.config.ConfigParser;
 import com.sdd.etl.loader.dolphin.DolphinDBLoader;
 import com.sdd.etl.loader.dolphin.DolphinDBScriptExecutor;
-import com.sdd.etl.loader.api.Loader;
 import com.sdd.etl.model.TargetDataModel;
+import com.sdd.etl.util.DateUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,6 +47,8 @@ public class LoadSubprocess implements SubprocessInterface {
 
             // Get loader configuration from ETL config
             LoaderConfiguration loaderConfig = parseLoaderConfiguration(context);
+            logger.info("LoadSubprocess: Loader configuration - host={}, port={}, username={}",
+                    loaderConfig.getHost(), loaderConfig.getPort(), loaderConfig.getUsername());
 
             // Establish DolphinDB connection (will be shared with CleanSubprocess)
             com.sdd.etl.loader.dolphin.DolphinDBConnection connection =
@@ -143,18 +144,99 @@ public class LoadSubprocess implements SubprocessInterface {
 
     /**
      * Parses LoaderConfiguration from ETConfiguration.
-     * Reads DolphinDB settings from the main configuration.
+     * Reads DolphinDB settings from the first target configuration of type 'dolphindb'.
+     * Extracts DolphinDB-specific properties from the target's properties map.
      *
      * @param context ETL context
      * @return parsed LoaderConfiguration
-     * @throws Exception if parsing fails
+     * @throws Exception if parsing fails or no DolphinDB target found
      */
     private LoaderConfiguration parseLoaderConfiguration(ETLContext context) throws Exception {
-        // For now, create a basic configuration from ETConfiguration
-        // In production, this would read from an INI file
+        // Get the first DolphinDB target from configuration
+        ETConfiguration.TargetConfig targetConfig = findDolphinDBTarget(context);
+        
+        if (targetConfig == null) {
+            throw new Exception("No DolphinDB target found in configuration. "
+                    + "Please add a [target] section with type=dolphindb in config file.");
+        }
+        
         LoaderConfiguration config = new LoaderConfiguration();
-        // Use defaults from config if available
+        
+        // Load standard fields
+        if (targetConfig.getConnectionString() != null && !targetConfig.getConnectionString().isEmpty()) {
+            // If connectionString is provided, parse it (format: host:port)
+            String connString = targetConfig.getConnectionString();
+            String[] parts = connString.split(":");
+            if (parts.length >= 1) {
+                config.setHost(parts[0]);
+            }
+            if (parts.length >= 2) {
+                try {
+                    config.setPort(Integer.parseInt(parts[1]));
+                } catch (NumberFormatException e) {
+                    // Keep default port
+                }
+            }
+        }
+        
+        config.setBatchSize(targetConfig.getBatchSize());
+        
+        // Load DolphinDB-specific properties from the properties map
+        // These are stored as extra properties in TargetConfig
+        java.util.Map<String, String> properties = targetConfig.getProperties();
+        
+        if (properties != null) {
+            // Check for DolphinDB-specific properties with ddb. prefix
+            String ddbHost = properties.get("ddb.host");
+            if (ddbHost != null && !ddbHost.trim().isEmpty()) {
+                config.setHost(ddbHost);
+            }
+            
+            String ddbPort = properties.get("ddb.port");
+            if (ddbPort != null && !ddbPort.trim().isEmpty()) {
+                try {
+                    config.setPort(Integer.parseInt(ddbPort));
+                } catch (NumberFormatException e) {
+                    // Keep default or use connectionString port
+                }
+            }
+            
+            String ddbUser = properties.get("ddb.user");
+            if (ddbUser != null && !ddbUser.trim().isEmpty()) {
+                config.setUsername(ddbUser);
+            }
+            
+            String ddbPassword = properties.get("ddb.password");
+            if (ddbPassword != null && !ddbPassword.trim().isEmpty()) {
+                config.setPassword(ddbPassword);
+            }
+            
+            String ddbDatabase = properties.get("ddb.database");
+            if (ddbDatabase != null && !ddbDatabase.trim().isEmpty()) {
+                config.setDatabase(ddbDatabase);
+            }
+        }
+        
         return config;
+    }
+    
+    /**
+     * Finds the first DolphinDB target from the ETL configuration.
+     *
+     * @param context ETL context containing configuration
+     * @return first target with type='dolphindb', or null if not found
+     */
+    private ETConfiguration.TargetConfig findDolphinDBTarget(ETLContext context) {
+        if (context.getConfig() == null || context.getConfig().getTargets() == null) {
+            return null;
+        }
+
+        for (ETConfiguration.TargetConfig target : context.getConfig().getTargets()) {
+            if ("dolphindb".equalsIgnoreCase(target.getType())) {
+                return target;
+            }
+        }
+        return null;
     }
 
     /**

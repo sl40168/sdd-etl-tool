@@ -383,6 +383,7 @@ public class ETConfiguration {
         private String type;
         private String connectionString;
         private int batchSize;
+        private Map<String, String> properties;
 
         /**
          * Gets the target name.
@@ -457,6 +458,13 @@ public class ETConfiguration {
         }
 
         /**
+         * Constructs a new TargetConfig with default values.
+         */
+        public TargetConfig() {
+            this.properties = new java.util.HashMap<>();
+        }
+
+        /**
          * Validates that required fields are present.
          * Required: name, type, batchSize (> 0).
          * Optional: connectionString (for informational purposes only).
@@ -467,6 +475,44 @@ public class ETConfiguration {
             return ETConfiguration.isNonEmpty(name)
                     && ETConfiguration.isNonEmpty(type)
                     && batchSize > 0;
+        }
+
+        /**
+         * Gets the properties map for this target configuration.
+         *
+         * @return properties map (never null)
+         */
+        public Map<String, String> getProperties() {
+            return properties;
+        }
+
+        /**
+         * Sets the properties map for this target configuration.
+         *
+         * @param properties properties map
+         */
+        public void setProperties(Map<String, String> properties) {
+            this.properties = properties;
+        }
+
+        /**
+         * Gets a property value by key.
+         *
+         * @param key property key
+         * @return property value or null if not found
+         */
+        public String getProperty(String key) {
+            return properties.get(key);
+        }
+
+        /**
+         * Sets a property value.
+         *
+         * @param key property key
+         * @param value property value
+         */
+        public void setProperty(String key, String value) {
+            properties.put(key, value);
         }
     }
 

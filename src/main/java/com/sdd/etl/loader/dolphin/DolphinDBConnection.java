@@ -51,6 +51,7 @@ public class DolphinDBConnection {
             if (config.getUsername() != null && !config.getUsername().isEmpty()) {
                 connection.connect(config.getHost(), config.getPort(),
                     config.getUsername(), config.getPassword());
+                connection.login(config.getUsername(), config.getPassword(), false);
             } else {
                 connection.connect(config.getHost(), config.getPort());
             }

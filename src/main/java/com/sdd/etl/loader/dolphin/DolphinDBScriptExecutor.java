@@ -67,7 +67,7 @@ public class DolphinDBScriptExecutor {
         try {
             DBConnection conn = connection.getConnection();
             logger.debug("Executing DolphinDB script: {}", script.substring(0, Math.min(100, script.length())));
-            conn.run(script);
+            conn.run(script.trim());
         } catch (Exception e) {
             throw new ScriptExecutionException("Failed to execute DolphinDB script: " + e.getMessage(), e);
         }

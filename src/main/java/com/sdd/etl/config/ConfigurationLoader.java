@@ -148,6 +148,13 @@ public class ConfigurationLoader {
         // Get target count
         int targetCount = iniConfig.getInt("targets.count", 0);
 
+        // Standard field names
+        java.util.Set<String> standardFields = new java.util.HashSet<>();
+        standardFields.add("name");
+        standardFields.add("type");
+        standardFields.add("connectionString");
+        standardFields.add("batchSize");
+
         // Parse each target
         for (int i = 1; i <= targetCount; i++) {
             String sectionKey = "target" + i;
@@ -157,6 +164,26 @@ public class ConfigurationLoader {
             target.setType(iniConfig.getString(sectionKey + ".type"));
             target.setConnectionString(iniConfig.getString(sectionKey + ".connectionString"));
             target.setBatchSize(iniConfig.getInt(sectionKey + ".batchSize", 1000));
+
+            // Parse additional properties
+            String prefix = sectionKey + ".";
+            Iterator<String> keys = iniConfig.getKeys(prefix);
+            if (keys != null) {
+                while (keys.hasNext()) {
+                    String fullKey = keys.next();
+                    String suffix = fullKey.substring(prefix.length());
+                    // Normalize double dots caused by INI parser
+                    if (suffix.contains("..")) {
+                        suffix = suffix.replace("..", ".");
+                    }
+                    if (!standardFields.contains(suffix)) {
+                        String value = iniConfig.getString(fullKey);
+                        if (value != null) {
+                            target.setProperty(suffix, value);
+                        }
+                    }
+                }
+            }
 
             if (!target.isValid()) {
                 throw new ConfigurationException(
